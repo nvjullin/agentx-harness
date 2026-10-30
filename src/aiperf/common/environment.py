@@ -169,6 +169,16 @@ class _AgentXSettings(BaseSettings):
         "deliveries are near-immediate in practice, so the default window is far "
         "larger than any real gap; raise it for very high concurrency.",
     )
+    STAGGER_INITIAL_IDLE_CAP: bool = Field(
+        default=False,
+        description="Experimental. At PROFILING start, arm each trajectory "
+        "tree's first per-trace idle-cap watchdog with a seeded random residual "
+        "budget in (0, cap] instead of the full cap, as if the tree had already "
+        "been idle for a random part of its gap. Without it, every tree waiting "
+        "out a recorded gap longer than the cap is released at the same instant "
+        "(the cap), producing a synchronized request wave. No effect without "
+        "--trace-idle-gap-cap-seconds.",
+    )
 
 
 class _APIServerSettings(BaseSettings):

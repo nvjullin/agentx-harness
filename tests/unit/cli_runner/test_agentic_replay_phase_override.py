@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 from aiperf.config.flags import CLIConfig
 from aiperf.config.flags.resolver import resolve_config
 
@@ -63,16 +65,28 @@ def test_agentic_cache_warmup_duration_overrides_yaml_profiling_phase(
 ) -> None:
     """``--agentic-cache-warmup-duration`` overlays the YAML profiling phase despite not being in ``LOADGEN_FIELDS``."""
     cfg = resolve_config(
-        _cli(agentic_cache_warmup_duration=30.0), _agentic_yaml(tmp_path)
+        _cli(agentic_warmup=True, agentic_cache_warmup_duration=30.0),
+        _agentic_yaml(tmp_path),
     )
-    assert _profiling_phase(cfg).agentic_cache_warmup_duration == 30.0
+    phase = _profiling_phase(cfg)
+    assert phase.agentic_warmup is True
+    assert phase.agentic_cache_warmup_duration == 30.0
+
+
+def test_agentic_cache_warmup_duration_without_agentic_warmup_raises_error(
+    tmp_path: pathlib.Path,
+) -> None:
+    with pytest.raises(ValueError, match="requires --agentic-warmup"):
+        resolve_config(
+            _cli(agentic_cache_warmup_duration=30.0), _agentic_yaml(tmp_path)
+        )
 
 
 def test_agentic_cache_warmup_request_budget_overrides_yaml_profiling_phase(
     tmp_path: pathlib.Path,
 ) -> None:
     cfg = resolve_config(
-        _cli(warmup_requests_per_lane=10),
+        _cli(agentic_warmup=True, warmup_requests_per_lane=10),
         _agentic_yaml(tmp_path),
     )
     phase = _profiling_phase(cfg)
@@ -102,6 +116,7 @@ def test_no_agentic_flags_leaves_phase_defaults_intact() -> None:
     """Without the flags, the profiling phase keeps its defaults."""
     cfg = resolve_config(CLIConfig(), TEMPLATES_DIR / "minimal.yaml")
     phase = _profiling_phase(cfg)
+    assert phase.agentic_warmup is False
     assert phase.agentic_cache_warmup_duration is None
     assert phase.burst_phase_starts is False
 
@@ -137,8 +152,34 @@ def test_agentic_warmup_does_not_clobber_warmup_phase(
     """The overlay targets the profiling phase only; warmup is preserved."""
     path = tmp_path / "agentic_warmup_profiling.yaml"
     path.write_text(_AGENTIC_WARMUP_PROFILING_YAML)
-    cfg = resolve_config(_cli(agentic_cache_warmup_duration=30.0), path)
+    cfg = resolve_config(
+        _cli(agentic_warmup=True, agentic_cache_warmup_duration=30.0), path
+    )
     assert _profiling_phase(cfg).agentic_cache_warmup_duration == 30.0
     for phase in cfg.benchmark.phases:
         if phase.name == "warmup":
             assert getattr(phase, "agentic_cache_warmup_duration", None) is None
+
+
+def _agentic_yaml_with_warmup_tuning(tmp_path: pathlib.Path) -> pathlib.Path:
+    path = tmp_path / "agentic_profiling_tuned.yaml"
+    path.write_text(_AGENTIC_PROFILING_YAML + "    warmupRequestsPerLane: 10\n")
+    return path
+
+
+def test_agentic_warmup_flag_enables_yaml_warmup_tuning(
+    tmp_path: pathlib.Path,
+) -> None:
+    cfg = resolve_config(
+        _cli(agentic_warmup=True), _agentic_yaml_with_warmup_tuning(tmp_path)
+    )
+    phase = _profiling_phase(cfg)
+    assert phase.agentic_warmup is True
+    assert phase.warmup_requests_per_lane == 10
+
+
+def test_yaml_warmup_tuning_without_agentic_warmup_raises_error(
+    tmp_path: pathlib.Path,
+) -> None:
+    with pytest.raises(ValueError, match="requires --agentic-warmup"):
+        resolve_config(CLIConfig(), _agentic_yaml_with_warmup_tuning(tmp_path))

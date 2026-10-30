@@ -204,7 +204,7 @@ def test_agentic_replay_cli_cache_warmup_runs_to_completion(
 ) -> None:
     """Both cache-pressure modes complete their warmup, drain, and handoff."""
     cmd = _build_command(weka_small_dir, scenario=True, unsafe_override=True)
-    cmd += f" {warmup_option}"
+    cmd += f" --agentic-warmup {warmup_option}"
     result = cli.run_sync(cmd, timeout=defaults.timeout)
 
     assert result.exit_code == 0, (
@@ -244,3 +244,30 @@ def test_agentic_replay_cli_scenario_without_override_raises_lock_error(
         "lock-error output must reference the scenario or violated flag; "
         f"got:\n{combined}"
     )
+
+
+@pytest.mark.component_integration
+def test_agentic_replay_cli_window_start_interval_writes_suffix_windows(
+    cli: AIPerfCLI, weka_small_dir: Path
+) -> None:
+    """Suffix windows are exported from the real accumulators: window 0 covers
+    the whole profiling cohort, and later windows cover a shrinking cohort."""
+    cmd = _build_command(weka_small_dir, scenario=True, unsafe_override=True)
+    cmd += " --window-start-interval 5"
+    result = cli.run_sync(cmd, timeout=defaults.timeout)
+
+    assert result.exit_code == 0, f"stderr=\n{result.stderr}\n\nlog=\n{result.log}"
+    windows_dir = result.artifacts_dir / "windows"
+    manifest = json.loads((windows_dir / "manifest.json").read_text())
+    entries = manifest["windows"]
+    assert entries[0]["phase_name"] == "start_0s"
+    assert [entry["start_offset_sec"] for entry in entries] == [
+        5.0 * k for k in range(len(entries))
+    ]
+    first = json.loads(
+        (windows_dir / "start_0s" / "profile_export_aiperf.json").read_text()
+    )
+    assert first["request_count"]["avg"] == result.request_count
+    counts = [entry["successful_request_count"] for entry in entries]
+    assert counts == sorted(counts, reverse=True)
+    assert counts[-1] > 0

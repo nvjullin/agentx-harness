@@ -416,6 +416,16 @@ class PhaseProfileResults(AIPerfBaseModel):
     )
 
 
+class WindowProfileResults(PhaseProfileResults):
+    """Metric summary for one suffix window of the profiling phase."""
+
+    start_offset_sec: float = Field(
+        ge=0,
+        description="Window start in seconds after the profiling phase start; the "
+        "window ends at the profiling end.",
+    )
+
+
 class ProfileMetricDurationCoverage(AIPerfBaseModel):
     """Observed profiling-metric coverage relative to a configured phase duration."""
 

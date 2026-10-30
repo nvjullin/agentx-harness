@@ -20,7 +20,7 @@ The pipeline:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -574,3 +574,111 @@ class TestProcessResultsServerMetricsFailure:
             "Failed to process server metrics results" in str(call.args[0])
             for call in mgr.exception.call_args_list
         )
+
+
+class TestProcessResultsWindowArtifacts:
+    """``window_start_interval`` writes profiling suffix windows before the root publish."""
+
+    @staticmethod
+    def _windowed_manager(
+        interval: float | None, *, export_exc: BaseException | None = None
+    ) -> tuple[MagicMock, MagicMock, list[str]]:
+        acc = _make_summary_accumulator([_STUB_METRIC_RESULT])
+        count = MetricResult(
+            tag="request_count", header="Request Count", unit="requests", avg=3
+        )
+        acc.export_window_results = AsyncMock(
+            side_effect=export_exc,
+            return_value=AccumulatorMetricsSummary(results={count.tag: count}),
+        )
+        mgr = _make_manager_mock(accumulators={AccumulatorType.METRIC_RESULTS: acc})
+        mgr._window_export_cancelled = False
+        mgr.run.cfg.artifacts.window_start_interval = interval
+        mgr._records_tracker.create_aggregate_stats_for_phase.return_value = (
+            PhaseRecordsStats(
+                phase=CreditPhase.PROFILING,
+                start_ns=1_000_000_000,
+                requests_end_ns=2_000_000_000,
+            )
+        )
+        events: list[str] = []
+        exporter = MagicMock()
+        exporter.export_window_artifacts = AsyncMock(
+            side_effect=lambda window: events.append(window.phase_name) or {}
+        )
+        exporter.write_window_manifest = AsyncMock(
+            side_effect=lambda entries: events.append("manifest")
+        )
+
+        async def publish(message) -> None:  # noqa: ANN001
+            events.append(type(message).__name__)
+
+        mgr.publish = AsyncMock(side_effect=publish)
+        return mgr, exporter, events
+
+    @pytest.mark.asyncio
+    async def test_windows_are_written_before_root_result_publish(self) -> None:
+        mgr, exporter, events = self._windowed_manager(0.5)
+
+        with patch(
+            "aiperf.records.records_manager.ExporterManager", return_value=exporter
+        ):
+            await mgr._process_results(phase=CreditPhase.PROFILING, cancelled=False)
+
+        assert events[:4] == [
+            "start_0s",
+            "start_0.5s",
+            "manifest",
+            "ProcessRecordsResultMessage",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_profile_cancel_stops_window_export_after_current_window(
+        self,
+    ) -> None:
+        mgr, exporter, events = self._windowed_manager(0.5)
+        mgr._window_export_cancelled = True
+
+        with patch(
+            "aiperf.records.records_manager.ExporterManager", return_value=exporter
+        ):
+            await mgr._process_results(phase=CreditPhase.PROFILING, cancelled=False)
+
+        assert events[:3] == ["start_0s", "manifest", "ProcessRecordsResultMessage"]
+
+    @pytest.mark.asyncio
+    async def test_window_failure_keeps_root_result(self) -> None:
+        mgr, exporter, events = self._windowed_manager(
+            60, export_exc=RuntimeError("boom")
+        )
+
+        with patch(
+            "aiperf.records.records_manager.ExporterManager", return_value=exporter
+        ):
+            result = await mgr._process_results(
+                phase=CreditPhase.PROFILING, cancelled=False
+            )
+
+        assert _STUB_METRIC_RESULT in result.results.records
+        assert "ProcessRecordsResultMessage" in events
+        exporter.write_window_manifest.assert_not_awaited()
+        assert any(
+            "Failed to export profiling windows" in str(call.args[0])
+            for call in mgr.exception.call_args_list
+        )
+
+    @pytest.mark.parametrize("interval", [None, 60])
+    @pytest.mark.asyncio
+    async def test_no_windows_without_interval_or_on_cancelled_processing(
+        self, interval: float | None
+    ) -> None:
+        mgr, exporter, events = self._windowed_manager(interval)
+
+        with patch(
+            "aiperf.records.records_manager.ExporterManager", return_value=exporter
+        ):
+            await mgr._process_results(
+                phase=CreditPhase.PROFILING, cancelled=interval is not None
+            )
+
+        exporter.export_window_artifacts.assert_not_awaited()

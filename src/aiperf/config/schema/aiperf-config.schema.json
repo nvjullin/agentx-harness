@@ -668,6 +668,31 @@
           "title": "Sliceduration",
           "x-jinja2-supported": true
         },
+        "windowStartInterval": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Spacing in seconds of suffix-window start offsets (must be > 0). At run end, AIPerf also exports the profiling summary for each window that starts k * interval seconds after the profiling start and ends at the profiling end, under `windows/`, so the measured window can be chosen after the run. Supports: 60, '60s', '5m'.",
+          "gt": 0,
+          "title": "Windowstartinterval",
+          "x-jinja2-supported": true
+        },
         "showTraceTiming": {
           "default": false,
           "description": "Display HTTP trace timing metrics in console output. Shows detailed timing breakdown: blocked, DNS, connecting, sending, waiting (TTFB), receiving, and total duration.",
@@ -1302,6 +1327,12 @@
                       "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                       "title": "Systemidlegapcapseconds"
                     },
+                    "agenticWarmup": {
+                      "default": false,
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "title": "Agenticwarmup",
+                      "type": "boolean"
+                    },
                     "agenticCacheWarmupDuration": {
                       "anyOf": [
                         {
@@ -1749,6 +1780,12 @@
                       "default": null,
                       "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                       "title": "Systemidlegapcapseconds"
+                    },
+                    "agenticWarmup": {
+                      "default": false,
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "title": "Agenticwarmup",
+                      "type": "boolean"
                     },
                     "agenticCacheWarmupDuration": {
                       "anyOf": [
@@ -2265,6 +2302,12 @@
                       "default": null,
                       "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                       "title": "Systemidlegapcapseconds"
+                    },
+                    "agenticWarmup": {
+                      "default": false,
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "title": "Agenticwarmup",
+                      "type": "boolean"
                     },
                     "agenticCacheWarmupDuration": {
                       "anyOf": [
@@ -2796,6 +2839,12 @@
                       "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                       "title": "Systemidlegapcapseconds"
                     },
+                    "agenticWarmup": {
+                      "default": false,
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "title": "Agenticwarmup",
+                      "type": "boolean"
+                    },
                     "agenticCacheWarmupDuration": {
                       "anyOf": [
                         {
@@ -3312,6 +3361,12 @@
                       "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                       "title": "Systemidlegapcapseconds"
                     },
+                    "agenticWarmup": {
+                      "default": false,
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "title": "Agenticwarmup",
+                      "type": "boolean"
+                    },
                     "agenticCacheWarmupDuration": {
                       "anyOf": [
                         {
@@ -3804,6 +3859,12 @@
                       "default": null,
                       "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                       "title": "Systemidlegapcapseconds"
+                    },
+                    "agenticWarmup": {
+                      "default": false,
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "title": "Agenticwarmup",
+                      "type": "boolean"
                     },
                     "agenticCacheWarmupDuration": {
                       "anyOf": [
@@ -5172,6 +5233,12 @@
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
                 },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
+                },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
                     {
@@ -5619,6 +5686,12 @@
                   "default": null,
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
+                },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
                 },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
@@ -6135,6 +6208,12 @@
                   "default": null,
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
+                },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
                 },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
@@ -6666,6 +6745,12 @@
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
                 },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
+                },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
                     {
@@ -7182,6 +7267,12 @@
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
                 },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
+                },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
                     {
@@ -7674,6 +7765,12 @@
                   "default": null,
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
+                },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
                 },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
@@ -8163,6 +8260,12 @@
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
                 },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
+                },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
                     {
@@ -8610,6 +8713,12 @@
                   "default": null,
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
+                },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
                 },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
@@ -9126,6 +9235,12 @@
                   "default": null,
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
+                },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
                 },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
@@ -9657,6 +9772,12 @@
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
                 },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
+                },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
                     {
@@ -10173,6 +10294,12 @@
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
                 },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
+                },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
                     {
@@ -10665,6 +10792,12 @@
                   "default": null,
                   "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
                   "title": "Systemidlegapcapseconds"
+                },
+                "agenticWarmup": {
+                  "default": false,
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "title": "Agenticwarmup",
+                  "type": "boolean"
                 },
                 "agenticCacheWarmupDuration": {
                   "anyOf": [
@@ -11564,6 +11697,12 @@
           "title": "Systemidlegapcapseconds",
           "x-jinja2-supported": true
         },
+        "agenticWarmup": {
+          "default": false,
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "title": "Agenticwarmup",
+          "type": "boolean"
+        },
         "agenticCacheWarmupDuration": {
           "anyOf": [
             {
@@ -12324,6 +12463,12 @@
           "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
           "title": "Systemidlegapcapseconds",
           "x-jinja2-supported": true
+        },
+        "agenticWarmup": {
+          "default": false,
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "title": "Agenticwarmup",
+          "type": "boolean"
         },
         "agenticCacheWarmupDuration": {
           "anyOf": [
@@ -14341,6 +14486,12 @@
           "title": "Systemidlegapcapseconds",
           "x-jinja2-supported": true
         },
+        "agenticWarmup": {
+          "default": false,
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "title": "Agenticwarmup",
+          "type": "boolean"
+        },
         "agenticCacheWarmupDuration": {
           "anyOf": [
             {
@@ -15162,6 +15313,12 @@
           "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
           "title": "Systemidlegapcapseconds",
           "x-jinja2-supported": true
+        },
+        "agenticWarmup": {
+          "default": false,
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "title": "Agenticwarmup",
+          "type": "boolean"
         },
         "agenticCacheWarmupDuration": {
           "anyOf": [
@@ -17781,6 +17938,12 @@
           "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
           "title": "Systemidlegapcapseconds",
           "x-jinja2-supported": true
+        },
+        "agenticWarmup": {
+          "default": false,
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "title": "Agenticwarmup",
+          "type": "boolean"
         },
         "agenticCacheWarmupDuration": {
           "anyOf": [
@@ -21410,6 +21573,12 @@
           "description": "AGENTIC_REPLAY only: maximum time in seconds the replay may remain globally idle while future requests are scheduled. When no requests are in flight or ready, all pending request timers shift earlier by the same amount so the next request arrives within this limit. Per-trace timing, timer order, and relative spacing are otherwise preserved. None disables the global idle cap.",
           "title": "Systemidlegapcapseconds",
           "x-jinja2-supported": true
+        },
+        "agenticWarmup": {
+          "default": false,
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "title": "Agenticwarmup",
+          "type": "boolean"
         },
         "agenticCacheWarmupDuration": {
           "anyOf": [

@@ -347,6 +347,19 @@ class BasePhaseConfig(AdaptiveScalePhaseMixin, BaseConfig):
         ),
     ]
 
+    agentic_warmup: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="AGENTIC_REPLAY only: run the synthesized warmup phase "
+            "(t* snapshot primers, plus the optional cache-pressure substage) "
+            "before profiling. Off by default: profiling replays from t* with "
+            "no preceding warmup, so the server sees one continuous replay. "
+            "Required by agentic_cache_warmup_duration, "
+            "warmup_requests_per_lane and agentic_warmup_grace_period.",
+        ),
+    ]
+
     agentic_cache_warmup_duration: Annotated[
         float | None,
         Field(

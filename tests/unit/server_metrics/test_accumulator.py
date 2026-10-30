@@ -378,6 +378,71 @@ class TestServerMetricsAccumulator:
         assert warmup_total == pytest.approx(100.0)
         assert profiling_total == pytest.approx(100.0)
 
+    async def test_export_window_results_cuts_phase_series_at_window_start(
+        self,
+        mock_cfg: BenchmarkRun,
+    ) -> None:
+        """A large counter increment before the window start must not reach the
+        window delta, although every scrape is PROFILING-tagged; the last scrape
+        before the start is the delta reference."""
+        processor = ServerMetricsAccumulator(mock_cfg)
+        for timestamp_ns, value in (
+            (1_000_000_000, 0.0),
+            (2_000_000_000, 1000.0),
+            (3_000_000_000, 1010.0),
+            (4_000_000_000, 1030.0),
+        ):
+            await processor.process_server_metrics_record(
+                ServerMetricsRecord(
+                    endpoint_url="http://node1:8081/metrics",
+                    timestamp_ns=timestamp_ns,
+                    endpoint_latency_ns=5_000_000,
+                    metrics={
+                        "requests": MetricFamily(
+                            type=PrometheusMetricType.COUNTER,
+                            description="Total requests",
+                            samples=[MetricSample(labels=None, value=value)],
+                        )
+                    },
+                    benchmark_phase=CreditPhase.PROFILING,
+                )
+            )
+
+        whole = await processor.export_results(
+            ExportContext(start_ns=2_500_000_000, end_ns=4_000_000_000)
+        )
+        window = await processor.export_window_results(
+            ExportContext(start_ns=2_500_000_000, end_ns=4_000_000_000)
+        )
+
+        assert whole is not None and window is not None
+        endpoint_key = next(iter(window.endpoint_summaries))
+
+        def total(results: ServerMetricsResults) -> float:
+            series = results.endpoint_summaries[endpoint_key].metrics["requests"].series
+            return series[0].stats.total
+
+        # The phase-tagged path ignores the context start and keeps 0 -> 1030.
+        assert total(whole) == pytest.approx(1030.0)
+        # The window references the 2.0s scrape (1000) and ends at 1030.
+        assert total(window) == pytest.approx(30.0)
+        assert window.start_ns == 2_500_000_000
+        assert window.warmup_endpoint_summaries is None
+        # Collection info covers the window, not the whole run.
+        info = window.endpoint_summaries[endpoint_key].info
+        assert info.total_fetches == 2
+        assert info.first_fetch_ns == 3_000_000_000
+        assert whole.endpoint_summaries[endpoint_key].info.total_fetches == 4
+
+    async def test_export_window_results_without_endpoints_returns_none(
+        self, mock_cfg: BenchmarkRun
+    ) -> None:
+        processor = ServerMetricsAccumulator(mock_cfg)
+        assert (
+            await processor.export_window_results(ExportContext(start_ns=1, end_ns=2))
+            is None
+        )
+
     async def test_export_results_degenerate_warmup_window_preserves_profiling(
         self,
         mock_cfg: BenchmarkRun,

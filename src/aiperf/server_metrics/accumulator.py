@@ -251,6 +251,42 @@ class ServerMetricsAccumulator(BaseMetricsProcessor):
 
         return results
 
+    async def export_window_results(
+        self, ctx: ExportContext
+    ) -> ServerMetricsResults | None:
+        """Export one suffix window of the run, cut by time rather than phase tag.
+
+        Phase-tagged series ignore the context bounds, so a window would keep
+        every sample since the phase began. The time-bounded path uses the last
+        scrape before ``ctx.start_ns`` as the counter/histogram delta reference
+        and, like the whole-run export, includes the final collection. Endpoint
+        collection info covers the same span. Timeslices, warmup summaries and
+        Parquet stay whole-run artifacts.
+        """
+        if not self._server_metrics_hierarchy.endpoints:
+            return None
+        start_ns = ctx.start_ns or 0
+        end_ns = ctx.end_ns or 0
+        endpoint_summaries = self._compute_endpoint_summaries(
+            start_ns,
+            end_ns,
+            None,
+            include_final_collection=True,
+            window_scoped_info=True,
+        )
+        if not endpoint_summaries:
+            return None
+        endpoint_list = list(self._server_metrics_hierarchy.endpoints.keys())
+        return ServerMetricsResults(
+            benchmark_id=self.run.benchmark_id,
+            endpoint_summaries=endpoint_summaries,
+            start_ns=start_ns,
+            end_ns=end_ns,
+            endpoints_configured=endpoint_list,
+            endpoints_successful=endpoint_list,
+            error_summary=ctx.error_summary or [],
+        )
+
     async def _export_parquet_widened(self, start_ns: int, end_ns: int) -> None:
         """Export the Parquet artifact over the collection-widened window.
 
@@ -281,6 +317,7 @@ class ServerMetricsAccumulator(BaseMetricsProcessor):
         slice_duration: float | None = None,
         *,
         include_final_collection: bool,
+        window_scoped_info: bool = False,
     ) -> dict[str, ServerMetricsEndpointSummary]:
         """Compute all server metrics summaries with per-endpoint time filters.
 
@@ -365,7 +402,11 @@ class ServerMetricsAccumulator(BaseMetricsProcessor):
                         series=[series_stats],
                     )
 
-            info_filter = None if include_final_collection else time_filter
+            info_filter = (
+                time_filter
+                if window_scoped_info or not include_final_collection
+                else None
+            )
             summaries[endpoint_display] = ServerMetricsEndpointSummary(
                 endpoint_url=endpoint_url,
                 info=self._compute_endpoint_info(time_series, info_filter),

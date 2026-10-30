@@ -102,6 +102,9 @@ def resolve_config(
         if pre_overrides
         else yaml_dict
     )
+    # --agentic-warmup must reach the profiling phase before the first
+    # validation, or a YAML carrying agentic warmup tuning fails it.
+    pre_merged = _with_agentic_phase_overrides(pre_merged, cli_config)
     base_config = AIPerfConfig.model_validate(pre_merged)
 
     overrides = build_cli_overrides(cli_config, benchmark_config=base_config.benchmark)
@@ -489,6 +492,32 @@ def _apply_phase_loadgen_overrides(merged: dict[str, Any], cli: CLIConfig) -> No
         target["grace_period"] = cli.benchmark_grace_period
 
     _apply_agentic_replay_fields(target, cli)
+
+
+def _with_agentic_phase_overrides(
+    config_dict: dict[str, Any], cli: CLIConfig
+) -> dict[str, Any]:
+    """Return ``config_dict`` with only the AGENTIC_REPLAY phase flags overlaid.
+
+    A copy is overlaid when any such flag is set; see
+    :func:`_apply_phase_loadgen_overrides` for the full overlay.
+    """
+    from aiperf.config.flags._converter_profiling import (
+        _AGENTIC_REPLAY_ROUTES,
+        _apply_agentic_replay_fields,
+    )
+
+    if not cli.model_fields_set.intersection(_AGENTIC_REPLAY_ROUTES):
+        return config_dict
+    benchmark = config_dict.get("benchmark")
+    phases = benchmark.get("phases") if isinstance(benchmark, dict) else None
+    if not isinstance(phases, list) or not phases:
+        return config_dict
+    config_dict = copy.deepcopy(config_dict)
+    target = _find_profiling_phase(config_dict["benchmark"]["phases"])
+    if target is not None:
+        _apply_agentic_replay_fields(target, cli)
+    return config_dict
 
 
 def _reject_loadgen_target_collisions(fields_set: set[str]) -> None:

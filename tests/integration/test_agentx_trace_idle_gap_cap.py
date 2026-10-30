@@ -121,7 +121,6 @@ async def test_agentx_trace_idle_gap_cap_controls_replay_timing(
             --no-fixed-schedule
             --concurrency 4
             --benchmark-duration 6
-            {"--warmup-requests-per-lane 1" if scenario == "agentx" else ""}
             --trajectory-start-min-ratio 0.25
             --trajectory-start-max-ratio 0.25
             --random-seed 42

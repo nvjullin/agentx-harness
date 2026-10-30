@@ -53,6 +53,7 @@ _AGENTIC_REPLAY_ROUTES: tuple[str, ...] = (
     "trajectory_start_max_ratio",
     "burst_phase_starts",
     "system_idle_gap_cap_seconds",
+    "agentic_warmup",
     "agentic_cache_warmup_duration",
     "warmup_requests_per_lane",
     "agentic_warmup_grace_period",

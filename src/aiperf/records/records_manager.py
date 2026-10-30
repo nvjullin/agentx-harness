@@ -68,6 +68,7 @@ from aiperf.common.models import (
 from aiperf.common.scenario.registry import get_scenario
 from aiperf.common.types import MetricTagT
 from aiperf.common.utils import yield_to_event_loop
+from aiperf.config.artifacts import OutputDefaults
 from aiperf.config.comm import ZMQDualBindConfig
 from aiperf.credit.messages import (
     CreditPhaseCompleteMessage,
@@ -76,6 +77,7 @@ from aiperf.credit.messages import (
     CreditPhaseStartMessage,
     CreditsCompleteMessage,
 )
+from aiperf.exporters.exporter_manager import ExporterManager
 from aiperf.gpu_telemetry.protocols import GPUTelemetryAccumulatorProtocol
 from aiperf.metrics.accumulator_models import AccumulatorMetricsSummary
 from aiperf.metrics.cache_reporting_hint import (
@@ -101,7 +103,11 @@ from aiperf.records.records_manager_processing import (
     load_stream_exporters,
 )
 from aiperf.records.records_tracker import RecordsTracker
-from aiperf.server_metrics.protocols import ServerMetricsAccumulatorProtocol
+from aiperf.records.window_results import iter_window_profile_results
+from aiperf.server_metrics.protocols import (
+    ServerMetricsAccumulatorProtocol,
+    ServerMetricsWindowExporterProtocol,
+)
 
 if TYPE_CHECKING:
     from aiperf.config.config import BenchmarkConfig
@@ -566,6 +572,7 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         # would otherwise double-publish and double-finalize stream exporters.
         self._process_results_lock = asyncio.Lock()
         self._processed_results: dict[CreditPhase, ProcessRecordsResult] = {}
+        self._window_export_cancelled = False
 
         self._metric_record_accumulators = [
             accumulator
@@ -1136,6 +1143,9 @@ class RecordsManager(PullClientMixin, BaseComponentService):
 
         # Mark the phase as cancelled in the tracker
         self._records_tracker.mark_phase_cancelled(CreditPhase.PROFILING)
+        # Natural finalization may be exporting windows under the results lock;
+        # stop it so this cancel gets the root result in time.
+        self._window_export_cancelled = True
 
         return await self._process_results(phase=CreditPhase.PROFILING, cancelled=True)
 
@@ -1658,6 +1668,68 @@ class RecordsManager(PullClientMixin, BaseComponentService):
             )
         return phase_results or None
 
+    async def _export_window_artifacts(self, root_results: ProfileResults) -> None:
+        """Write the profiling suffix windows when a start interval is set.
+
+        Runs before the root result is published, so every window is on disk
+        before the controller can shut the run down. A profile cancel stops it
+        at the next window so the cancel response is not held up. Best-effort:
+        a failure costs only the windows.
+        """
+        cfg = self.run.cfg
+        interval_sec = cfg.artifacts.window_start_interval
+        metrics_accumulator = self._accumulators.get(AccumulatorType.METRIC_RESULTS)
+        if not isinstance(interval_sec, int | float) or metrics_accumulator is None:
+            return
+        server_metrics_accumulator = (
+            None if cfg.server_metrics_disabled else self._server_metrics_accumulator
+        )
+        if server_metrics_accumulator is not None and not isinstance(
+            server_metrics_accumulator, ServerMetricsWindowExporterProtocol
+        ):
+            self.warning(
+                f"{type(server_metrics_accumulator).__name__} cannot export "
+                "suffix windows; window artifacts omit server metrics"
+            )
+            server_metrics_accumulator = None
+        exporter = ExporterManager(
+            results=root_results, run=self.run, telemetry_results=None
+        )
+        entries: list[dict[str, Any]] = []
+        try:
+            async for window in iter_window_profile_results(
+                metrics_accumulator=metrics_accumulator,
+                server_metrics_accumulator=server_metrics_accumulator,
+                gpu_telemetry_accumulator=None
+                if cfg.gpu_telemetry_disabled
+                else self._gpu_telemetry_accumulator,
+                stats=self._records_tracker.create_aggregate_stats_for_phase(
+                    CreditPhase.PROFILING
+                ),
+                interval_sec=interval_sec,
+                max_windows=OutputDefaults.MAX_SUFFIX_WINDOWS,
+                final_scrape_grace_ns=Environment.GPU.FINAL_SCRAPE_GRACE_NS,
+            ):
+                entries.append(await exporter.export_window_artifacts(window))
+                if self._window_export_cancelled is True:
+                    self.warning(
+                        f"Profile cancelled; stopped after {len(entries)} window(s)"
+                    )
+                    break
+        except Exception as e:  # noqa: BLE001 - windows must not cost the run its results
+            self.exception(f"Failed to export profiling windows: {e!r}")
+        if not entries:
+            return
+        try:
+            await exporter.write_window_manifest(entries)
+        except (OSError, ValueError) as e:
+            self.warning(f"Failed to write window manifest: {e!r}")
+            return
+        self.info(
+            f"Exported {len(entries)} profiling window(s) starting every "
+            f"{interval_sec:g}s"
+        )
+
     @staticmethod
     def _phase_error_counts(
         error_counts: dict[ErrorDetails, int],
@@ -2143,6 +2215,8 @@ class RecordsManager(PullClientMixin, BaseComponentService):
             fatal_errors=fatal_errors,
         )
         self.debug(lambda: f"Process records result: {result}")
+        if phase == CreditPhase.PROFILING and not cancelled:
+            await RecordsManager._export_window_artifacts(self, result.results)
         self.debug("Publishing ProcessRecordsResultMessage...")
         await self.publish(
             ProcessRecordsResultMessage(

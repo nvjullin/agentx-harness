@@ -445,3 +445,25 @@ async def test_resumed_prefix_is_exact_and_submission_order_independent(
 async def _record_issue(issued: list[str], name: str) -> bool:
     issued.append(name)
     return True
+
+
+@pytest.mark.asyncio
+async def test_initial_idle_budget_fraction_shortens_first_watchdog() -> None:
+    scheduler = LoopScheduler()
+    coordinator = ReplayBarrierCoordinator(
+        _metadata(),
+        scheduler=scheduler,
+        root_idle_gap_cap_seconds=0.4,
+    )
+    coordinator.activate()
+    fired = asyncio.Event()
+
+    async def mark_fired() -> None:
+        fired.set()
+
+    scheduler.schedule_later(5.0, mark_fired(), group_id="one")
+    started = asyncio.get_running_loop().time()
+    coordinator.observe_idle_root("one", budget_fraction=0.1)
+    await asyncio.wait_for(fired.wait(), timeout=0.3)
+
+    assert asyncio.get_running_loop().time() - started < 0.3

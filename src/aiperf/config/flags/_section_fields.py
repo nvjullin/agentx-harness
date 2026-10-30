@@ -142,6 +142,7 @@ OUTPUT_FIELDS: frozenset[str] = frozenset(
         "profile_export_prefix",
         "show_trace_timing",
         "slice_duration",
+        "window_start_interval",
     }
 )
 

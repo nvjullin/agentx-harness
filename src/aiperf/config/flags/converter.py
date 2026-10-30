@@ -60,6 +60,23 @@ _ENVELOPE_KEYS = {
     "benchmark",
 }
 
+# Generic warmup-phase triggers. Agentic replay drops declared warmup phases and
+# synthesizes its own warmup only under --agentic-warmup.
+_GENERIC_WARMUP_TRIGGER_FLAGS = (
+    ("warmup_request_count", "--warmup-request-count"),
+    ("warmup_duration", "--warmup-duration"),
+    ("warmup_num_sessions", "--num-warmup-sessions"),
+)
+
+# Scenario presets may carry agentic warmup tuning; it applies only when the
+# user opts into the warmup with --agentic-warmup, since those flags require it.
+_AGENTIC_WARMUP_DEFAULT_KEYS = (
+    "agentic_cache_warmup_duration",
+    "warmup_requests_per_lane",
+    "agentic_warmup_grace_period",
+    "warmup_grace_period",
+)
+
 
 def _wrap_under_envelope(v2_dict: dict[str, Any]) -> dict[str, Any]:
     """Partition a flat-shaped AIPerfConfig dict into envelope shape.
@@ -494,10 +511,37 @@ def convert_cli_to_aiperf(cli: CLIConfig) -> AIPerfConfig:
     """
     from aiperf.config.config import AIPerfConfig
 
+    _reject_generic_warmup_under_agentic_scenario(cli)
     cli = _apply_scenario_defaults(cli)
     nested = _assemble_envelope_dict(cli)
     _apply_variants_scenario_sweep(nested, cli)
     return AIPerfConfig(**nested)
+
+
+def _reject_generic_warmup_under_agentic_scenario(cli: CLIConfig) -> None:
+    """Reject generic warmup triggers that an agentic scenario would ignore.
+
+    Agentic replay runs no declared warmup phase, and its own warmup is
+    opt-in, so without --agentic-warmup these flags would silently do nothing.
+    """
+    from aiperf.common.scenario import get_scenario
+    from aiperf.plugin.enums import TimingMode
+
+    if cli.agentic_warmup or not cli.scenario:
+        return
+    if get_scenario(cli.scenario).timing_mode != TimingMode.AGENTIC_REPLAY:
+        return
+    flags = [
+        flag
+        for attr, flag in _GENERIC_WARMUP_TRIGGER_FLAGS
+        if attr in cli.model_fields_set
+    ]
+    if flags:
+        raise ValueError(
+            f"{', '.join(flags)} have no effect under --scenario {cli.scenario}: "
+            "agentic replay runs no declared warmup phase. Pass --agentic-warmup "
+            "for the agentic warmup, or drop these flags."
+        )
 
 
 def _apply_scenario_defaults(cli: CLIConfig) -> CLIConfig:
@@ -524,6 +568,9 @@ def _apply_scenario_defaults(cli: CLIConfig) -> CLIConfig:
         defaults.pop("no_gpu_telemetry", None)
     if cli.agentic_cache_warmup_duration is not None:
         defaults.pop("warmup_requests_per_lane", None)
+    if not cli.agentic_warmup:
+        for key in _AGENTIC_WARMUP_DEFAULT_KEYS:
+            defaults.pop(key, None)
     return cli.model_copy(update=defaults)
 
 
