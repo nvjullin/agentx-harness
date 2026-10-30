@@ -671,6 +671,7 @@
         "windowStartInterval": {
           "anyOf": [
             {
+              "gt": 0,
               "type": "number"
             },
             {
@@ -689,7 +690,6 @@
           ],
           "default": null,
           "description": "Spacing in seconds of suffix-window start offsets (must be > 0). At run end, AIPerf also exports the profiling summary for each window that starts k * interval seconds after the profiling start and ends at the profiling end, under `windows/`, so the measured window can be chosen after the run. Supports: 60, '60s', '5m'.",
-          "gt": 0,
           "title": "Windowstartinterval",
           "x-jinja2-supported": true
         },

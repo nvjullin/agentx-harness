@@ -9,7 +9,7 @@ the benchmark itself never changes behavior to exclude a startup transient.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from typing import Any
 
@@ -76,6 +76,7 @@ async def iter_window_profile_results(
     interval_sec: float,
     max_windows: int,
     final_scrape_grace_ns: int,
+    should_stop: Callable[[], bool] = lambda: False,
 ) -> AsyncIterator[WindowProfileResults]:
     """Yield the profiling suffix windows on the start grid, earliest first.
 
@@ -87,13 +88,16 @@ async def iter_window_profile_results(
 
     The request cohort only shrinks as the start moves later, so the grid stops
     at the first window without requests, and in any case after
-    ``max_windows`` windows. Yields nothing when the profiling phase has no
-    start or end time.
+    ``max_windows`` windows, or as soon as ``should_stop()`` is true before a
+    window is computed. Yields nothing when the profiling phase has no start or
+    end time.
     """
     if stats.start_ns is None or stats.requests_end_ns is None:
         return
     interval_ns = max(1, round(interval_sec * NANOS_PER_SECOND))
     for k in range(max_windows):
+        if should_stop():
+            return
         offset_ns = k * interval_ns
         start_ns = stats.start_ns + offset_ns
         if start_ns >= stats.requests_end_ns:

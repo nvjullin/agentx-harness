@@ -7,6 +7,7 @@ from __future__ import annotations
 import pathlib
 
 import pytest
+from pytest import param
 
 from aiperf.config.flags import CLIConfig
 from aiperf.config.flags.resolver import resolve_config
@@ -183,3 +184,57 @@ def test_yaml_warmup_tuning_without_agentic_warmup_raises_error(
 ) -> None:
     with pytest.raises(ValueError, match="requires --agentic-warmup"):
         resolve_config(CLIConfig(), _agentic_yaml_with_warmup_tuning(tmp_path))
+
+
+def test_generic_warmup_flags_on_agentic_yaml_without_agentic_warmup_raise_error(
+    tmp_path: pathlib.Path,
+) -> None:
+    with pytest.raises(ValueError, match="have no effect under agentic replay"):
+        resolve_config(_cli(warmup_duration=60), _agentic_yaml(tmp_path))
+
+
+_WINDOWED_YAML = """\
+schemaVersion: "2.0"
+benchmark:
+  model: meta-llama/Llama-3.1-8B-Instruct
+  endpoint:
+    url: http://localhost:8000
+    type: chat
+  dataset:
+    type: synthetic
+    entries: 100
+    prompts:
+      isl: 512
+      osl: 128
+  artifacts:
+    window_start_interval: 1
+  phases:
+    type: concurrency
+    concurrency: 8
+    duration: 3600
+"""
+
+
+@pytest.mark.parametrize(
+    "cli_interval,expected",
+    [
+        param(60, 60.0, id="override"),
+        param(0, None, id="disable"),
+    ],
+)  # fmt: skip
+def test_cli_window_start_interval_overrides_invalid_yaml_interval(
+    tmp_path: pathlib.Path, cli_interval: float, expected: float | None
+) -> None:
+    path = tmp_path / "windowed.yaml"
+    path.write_text(_WINDOWED_YAML)
+    cfg = resolve_config(_cli(window_start_interval=cli_interval), path)
+    assert cfg.benchmark.artifacts.window_start_interval == expected
+
+
+def test_yaml_window_start_interval_still_validated_after_merge(
+    tmp_path: pathlib.Path,
+) -> None:
+    path = tmp_path / "windowed.yaml"
+    path.write_text(_WINDOWED_YAML)
+    with pytest.raises(ValueError, match="more than 256 windows"):
+        resolve_config(CLIConfig(), path)

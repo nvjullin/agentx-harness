@@ -518,30 +518,38 @@ def convert_cli_to_aiperf(cli: CLIConfig) -> AIPerfConfig:
     return AIPerfConfig(**nested)
 
 
-def _reject_generic_warmup_under_agentic_scenario(cli: CLIConfig) -> None:
-    """Reject generic warmup triggers that an agentic scenario would ignore.
+def reject_ignored_generic_warmup_flags(
+    cli: CLIConfig, *, agentic_warmup: bool, context: str
+) -> None:
+    """Reject generic warmup triggers that an agentic replay run would ignore.
 
     Agentic replay runs no declared warmup phase, and its own warmup is
     opt-in, so without --agentic-warmup these flags would silently do nothing.
     """
-    from aiperf.common.scenario import get_scenario
-    from aiperf.plugin.enums import TimingMode
-
-    if cli.agentic_warmup or not cli.scenario:
-        return
-    if get_scenario(cli.scenario).timing_mode != TimingMode.AGENTIC_REPLAY:
-        return
     flags = [
         flag
         for attr, flag in _GENERIC_WARMUP_TRIGGER_FLAGS
         if attr in cli.model_fields_set
     ]
-    if flags:
+    if flags and not agentic_warmup:
         raise ValueError(
-            f"{', '.join(flags)} have no effect under --scenario {cli.scenario}: "
-            "agentic replay runs no declared warmup phase. Pass --agentic-warmup "
-            "for the agentic warmup, or drop these flags."
+            f"{', '.join(flags)} have no effect under {context}: agentic replay "
+            "runs no declared warmup phase. Pass --agentic-warmup for the agentic "
+            "warmup, or drop these flags."
         )
+
+
+def _reject_generic_warmup_under_agentic_scenario(cli: CLIConfig) -> None:
+    from aiperf.common.scenario import get_scenario
+    from aiperf.plugin.enums import TimingMode
+
+    if not cli.scenario:
+        return
+    if get_scenario(cli.scenario).timing_mode != TimingMode.AGENTIC_REPLAY:
+        return
+    reject_ignored_generic_warmup_flags(
+        cli, agentic_warmup=cli.agentic_warmup, context=f"--scenario {cli.scenario}"
+    )
 
 
 def _apply_scenario_defaults(cli: CLIConfig) -> CLIConfig:

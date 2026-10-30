@@ -176,8 +176,10 @@ class _AgentXSettings(BaseSettings):
         "budget in (0, cap] instead of the full cap, as if the tree had already "
         "been idle for a random part of its gap. Without it, every tree waiting "
         "out a recorded gap longer than the cap is released at the same instant "
-        "(the cap), producing a synchronized request wave. No effect without "
-        "--trace-idle-gap-cap-seconds.",
+        "(the cap), producing a synchronized request wave. A tree is released at "
+        "the earlier of its recorded first gap and its share of the cap, so a "
+        "first gap shorter than the cap can be shortened too. Later idle gaps "
+        "get the full cap. No effect without --trace-idle-gap-cap-seconds.",
     )
 
 

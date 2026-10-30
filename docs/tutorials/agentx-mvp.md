@@ -557,8 +557,8 @@ Windows require a single profiling phase that is the last phase. The grid stops
 at the first window with no requests and after at most 256 windows, and a
 profiling duration that would need more is rejected at startup.
 `--window-start-interval 0` turns the preset's windows off. Windows are written
-before the run's results are published, so a Ctrl+C during that step stops after
-the current window and keeps the root exports.
+before the run's results are published; a Ctrl+C during that step is answered
+with the finished root results and stops the export before the next window.
 
 The root exports (`profile_export_aiperf.json`, `server_metrics_export.json`, and
 the rest) still cover the whole profiling phase. Run long enough that the window

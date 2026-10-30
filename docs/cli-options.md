@@ -1242,7 +1242,6 @@ Duration in seconds for time-sliced metric analysis. When set, AIPerf divides th
 #### `--window-start-interval` `<float>`
 
 Spacing in seconds of suffix-window start offsets. At run end, AIPerf also exports the profiling summary (request metrics, server metrics, GPU telemetry) for each window that starts k * interval seconds after the profiling start and ends at the profiling end, under `windows/start_<offset>s/` with an index in `windows/manifest.json`, so the measured window can be chosen after the run. Requires a single profiling phase that is the last phase. 0 disables windows, overriding a scenario preset.
-<br/>_Constraints: ≥ 0_
 
 #### `--auto-plot`, `--no-auto-plot`
 
@@ -2787,7 +2786,6 @@ Duration in seconds for time-sliced metric analysis. When set, AIPerf divides th
 #### `--window-start-interval` `<float>`
 
 Spacing in seconds of suffix-window start offsets. At run end, AIPerf also exports the profiling summary (request metrics, server metrics, GPU telemetry) for each window that starts k * interval seconds after the profiling start and ends at the profiling end, under `windows/start_<offset>s/` with an index in `windows/manifest.json`, so the measured window can be chosen after the run. Requires a single profiling phase that is the last phase. 0 disables windows, overriding a scenario preset.
-<br/>_Constraints: ≥ 0_
 
 #### `--auto-plot`, `--no-auto-plot`
 

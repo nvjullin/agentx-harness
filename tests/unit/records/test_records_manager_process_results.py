@@ -29,6 +29,7 @@ from aiperf.common.messages import (
     ProcessAllResultsMessage,
     ProcessRecordsResultMessage,
     ProcessServerMetricsResultMessage,
+    ProfileCancelCommand,
 )
 from aiperf.common.models import (
     MetricResult,
@@ -633,9 +634,7 @@ class TestProcessResultsWindowArtifacts:
         ]
 
     @pytest.mark.asyncio
-    async def test_profile_cancel_stops_window_export_after_current_window(
-        self,
-    ) -> None:
+    async def test_profile_cancel_before_window_export_skips_windows(self) -> None:
         mgr, exporter, events = self._windowed_manager(0.5)
         mgr._window_export_cancelled = True
 
@@ -644,6 +643,41 @@ class TestProcessResultsWindowArtifacts:
         ):
             await mgr._process_results(phase=CreditPhase.PROFILING, cancelled=False)
 
+        exporter.export_window_artifacts.assert_not_awaited()
+        assert events[0] == "ProcessRecordsResultMessage"
+
+    @pytest.mark.asyncio
+    async def test_profile_cancel_during_window_export_returns_staged_root(
+        self,
+    ) -> None:
+        mgr, exporter, events = self._windowed_manager(0.5)
+        mgr._records_tracker.mark_phase_cancelled = MagicMock()
+        cancel_responses: list = []
+
+        async def export_and_cancel(window):  # noqa: ANN001, ANN202
+            events.append(window.phase_name)
+            # Runs inside natural finalization, which holds the results lock:
+            # the cancel must answer without waiting for it.
+            cancel_responses.append(
+                await asyncio.wait_for(
+                    RecordsManager._on_profile_cancel_command(
+                        mgr, ProfileCancelCommand(service_id="controller")
+                    ),
+                    timeout=1.0,
+                )
+            )
+            return {}
+
+        exporter.export_window_artifacts = AsyncMock(side_effect=export_and_cancel)
+
+        with patch(
+            "aiperf.records.records_manager.ExporterManager", return_value=exporter
+        ):
+            result = await mgr._process_results(
+                phase=CreditPhase.PROFILING, cancelled=False
+            )
+
+        assert cancel_responses == [result]
         assert events[:3] == ["start_0s", "manifest", "ProcessRecordsResultMessage"]
 
     @pytest.mark.asyncio

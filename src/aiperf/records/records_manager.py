@@ -573,6 +573,7 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         self._process_results_lock = asyncio.Lock()
         self._processed_results: dict[CreditPhase, ProcessRecordsResult] = {}
         self._window_export_cancelled = False
+        self._root_result_during_window_export: ProcessRecordsResult | None = None
 
         self._metric_record_accumulators = [
             accumulator
@@ -1143,9 +1144,12 @@ class RecordsManager(PullClientMixin, BaseComponentService):
 
         # Mark the phase as cancelled in the tracker
         self._records_tracker.mark_phase_cancelled(CreditPhase.PROFILING)
-        # Natural finalization may be exporting windows under the results lock;
-        # stop it so this cancel gets the root result in time.
+        # Natural finalization may be exporting windows under the results lock:
+        # stop it, and answer with its finished root result without waiting.
         self._window_export_cancelled = True
+        staged = self._root_result_during_window_export
+        if staged is not None:
+            return staged
 
         return await self._process_results(phase=CreditPhase.PROFILING, cancelled=True)
 
@@ -1672,9 +1676,9 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         """Write the profiling suffix windows when a start interval is set.
 
         Runs before the root result is published, so every window is on disk
-        before the controller can shut the run down. A profile cancel stops it
-        at the next window so the cancel response is not held up. Best-effort:
-        a failure costs only the windows.
+        before the controller can shut the run down. A profile cancel answers
+        with the staged root result at once and stops the export before the
+        next window. Best-effort: a failure costs only the windows.
         """
         cfg = self.run.cfg
         interval_sec = cfg.artifacts.window_start_interval
@@ -1698,6 +1702,7 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         entries: list[dict[str, Any]] = []
         try:
             async for window in iter_window_profile_results(
+                should_stop=lambda: self._window_export_cancelled is True,
                 metrics_accumulator=metrics_accumulator,
                 server_metrics_accumulator=server_metrics_accumulator,
                 gpu_telemetry_accumulator=None
@@ -1711,13 +1716,10 @@ class RecordsManager(PullClientMixin, BaseComponentService):
                 final_scrape_grace_ns=Environment.GPU.FINAL_SCRAPE_GRACE_NS,
             ):
                 entries.append(await exporter.export_window_artifacts(window))
-                if self._window_export_cancelled is True:
-                    self.warning(
-                        f"Profile cancelled; stopped after {len(entries)} window(s)"
-                    )
-                    break
         except Exception as e:  # noqa: BLE001 - windows must not cost the run its results
             self.exception(f"Failed to export profiling windows: {e!r}")
+        if self._window_export_cancelled is True:
+            self.warning(f"Profile cancelled; exported {len(entries)} window(s)")
         if not entries:
             return
         try:
@@ -1727,7 +1729,7 @@ class RecordsManager(PullClientMixin, BaseComponentService):
             return
         self.info(
             f"Exported {len(entries)} profiling window(s) starting every "
-            f"{interval_sec:g}s"
+            f"{interval_sec:g}s; index: {cfg.artifacts.dir / 'windows' / 'manifest.json'}"
         )
 
     @staticmethod
@@ -2216,7 +2218,11 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         )
         self.debug(lambda: f"Process records result: {result}")
         if phase == CreditPhase.PROFILING and not cancelled:
-            await RecordsManager._export_window_artifacts(self, result.results)
+            self._root_result_during_window_export = result
+            try:
+                await RecordsManager._export_window_artifacts(self, result.results)
+            finally:
+                self._root_result_during_window_export = None
         self.debug("Publishing ProcessRecordsResultMessage...")
         await self.publish(
             ProcessRecordsResultMessage(
