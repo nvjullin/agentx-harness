@@ -18,6 +18,8 @@ import copy
 import logging
 from typing import TYPE_CHECKING, Any
 
+from pydantic.alias_generators import to_camel
+
 from aiperf.common.enums import DatasetType
 from aiperf.common.phase import infer_legacy_phase_kind
 from aiperf.config.flags._resolver_gpu_telemetry import (
@@ -434,6 +436,7 @@ _LOADGEN_PHASE_FIELD_MAP: tuple[tuple[str, str], ...] = (
     ("request_count", "requests"),
     ("benchmark_duration", "duration"),
     ("benchmark_grace_period", "grace_period"),
+    ("measurement_start", "measurement_start"),
     ("concurrency", "concurrency"),
     ("prefill_concurrency", "prefill_concurrency"),
     ("request_rate", "rate"),
@@ -504,6 +507,9 @@ def _apply_phase_loadgen_overrides(merged: dict[str, Any], cli: CLIConfig) -> No
         value = getattr(cli, attr)
         if value is None:
             continue
+        # A camelCase YAML key next to the snake_case override would be
+        # rejected as an extra input.
+        target.pop(to_camel(key), None)
         target[key] = value
 
     if (
@@ -517,6 +523,9 @@ def _apply_phase_loadgen_overrides(merged: dict[str, Any], cli: CLIConfig) -> No
     _apply_agentic_replay_fields(target, cli)
 
 
+_MEASUREMENT_START_KEYS = frozenset({"measurement_start", "measurementStart"})
+
+
 def _for_preliminary_validation(
     config_dict: dict[str, Any], cli: CLIConfig
 ) -> dict[str, Any]:
@@ -525,8 +534,10 @@ def _for_preliminary_validation(
     The AGENTIC_REPLAY phase flags are overlaid so --agentic-warmup reaches a
     YAML that carries agentic warmup tuning (see
     :func:`_apply_phase_loadgen_overrides` for the full overlay). The suffix
-    window interval is dropped: its cross-field check needs the CLI overrides
-    merged first, and the final validation runs it on the merged config.
+    window interval and the phases' measurement start are dropped: their
+    cross-field checks need the CLI overrides merged first (e.g.
+    ``--measurement-start 0``), and the final validation runs them on the
+    merged config.
     """
     from aiperf.config.flags._converter_profiling import (
         _AGENTIC_REPLAY_ROUTES,
@@ -543,15 +554,27 @@ def _for_preliminary_validation(
         else set()
     )
     phases = benchmark.get("phases")
+    phase_entries = (
+        [entry for entry in phases if isinstance(entry, dict)]
+        if isinstance(phases, list)
+        else []
+    )
+    has_measurement_start = any(
+        _MEASUREMENT_START_KEYS & entry.keys() for entry in phase_entries
+    )
     overlay_agentic = bool(
         cli.model_fields_set.intersection(_AGENTIC_REPLAY_ROUTES)
-    ) and (isinstance(phases, list) and bool(phases))
-    if not window_keys and not overlay_agentic:
+    ) and bool(phase_entries)
+    if not window_keys and not has_measurement_start and not overlay_agentic:
         return config_dict
     config_dict = copy.deepcopy(config_dict)
     benchmark = config_dict["benchmark"]
     for key in window_keys:
         benchmark["artifacts"].pop(key)
+    for entry in benchmark.get("phases") or []:
+        if isinstance(entry, dict):
+            for key in _MEASUREMENT_START_KEYS & entry.keys():
+                entry.pop(key)
     if overlay_agentic:
         target = _find_profiling_phase(benchmark["phases"])
         if target is not None:

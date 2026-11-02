@@ -715,6 +715,8 @@ class BenchmarkConfig(BaseConfig, BenchmarkHelpersMixin):
                 f"{[(phase.name, phase.kind) for phase in self.phases]}."
             )
         duration = profiling_phases[0].duration
+        if isinstance(duration, int | float):
+            duration += profiling_phases[0].measurement_start or 0.0
         max_windows = OutputDefaults.MAX_SUFFIX_WINDOWS
         if isinstance(duration, int | float) and duration / interval > max_windows:
             raise ValueError(
@@ -723,6 +725,53 @@ class BenchmarkConfig(BaseConfig, BenchmarkHelpersMixin):
                 f"least {duration / max_windows:g}s."
             )
         return self
+
+    @model_validator(mode="after")
+    def validate_measurement_start(self) -> Self:
+        """Reject a measurement start the summaries cannot honor.
+
+        A scenario fills ``duration`` after this validator runs and re-checks
+        with :func:`measurement_start_error` once it has.
+        """
+        error = measurement_start_error(
+            self, allow_missing_duration=self.scenario is not None
+        )
+        if error is not None:
+            raise ValueError(error)
+        return self
+
+
+def measurement_start_error(
+    cfg: BenchmarkConfig, *, allow_missing_duration: bool = False
+) -> str | None:
+    """Return why a nonzero ``measurement_start`` cannot apply to ``cfg``, or None.
+
+    The summaries cut one phase's requests at a single offset and the phase is
+    extended by that offset, so the profiling phase must be the only phase and
+    duration-bounded. The agentic warmup already excludes a startup period;
+    combining both would discard it twice.
+    """
+    offset_phases = [phase for phase in cfg.phases if phase.measurement_start]
+    if not offset_phases:
+        return None
+    phase = offset_phases[0]
+    if len(cfg.phases) != 1 or phase.kind != "profiling":
+        return (
+            "--measurement-start requires a profiling phase that is the only phase; "
+            f"got phases {[(p.name, p.kind) for p in cfg.phases]}."
+        )
+    if phase.agentic_warmup:
+        return (
+            f"--measurement-start {phase.measurement_start:g} cannot be combined with "
+            "--agentic-warmup, which already excludes a startup period; pass "
+            "--measurement-start 0 to use the agentic warmup."
+        )
+    if phase.duration is None and not allow_missing_duration:
+        return (
+            "--measurement-start requires --benchmark-duration: the profiling phase "
+            "runs measurement start + duration seconds."
+        )
+    return None
 
 
 class AIPerfConfig(BaseConfig):

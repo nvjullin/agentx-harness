@@ -589,6 +589,14 @@ def _build_warmup_config(
     )
 
 
+def _profiling_run_duration(phase: PhaseConfig) -> float | None:
+    """Seconds the profiling phase issues credits: the measured duration plus the
+    measurement start, whose earlier requests the summaries exclude."""
+    if phase.duration is None:
+        return None
+    return phase.duration + (phase.measurement_start or 0.0)
+
+
 def _agentic_warmup_grace_period(phase: PhaseConfig) -> float | None:
     """Resolve the agentic auto-warmup barrier grace from the profiling phase.
 
@@ -707,7 +715,7 @@ def _build_profiling_config(
         phase_kind=phase.kind,
         request_cancellation=_phase_cancellation_config(phase, default_cancellation),
         timing_mode=timing_mode,
-        expected_duration_sec=phase.duration,
+        expected_duration_sec=_profiling_run_duration(phase),
         total_expected_requests=phase.requests,
         expected_num_sessions=phase.sessions,
         concurrency=phase.concurrency,

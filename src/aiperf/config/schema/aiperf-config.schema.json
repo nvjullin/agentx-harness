@@ -1216,6 +1216,20 @@
                       "ge": 0,
                       "title": "Graceperiod"
                     },
+                    "measurementStart": {
+                      "anyOf": [
+                        {
+                          "ge": 0,
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                      "title": "Measurementstart"
+                    },
                     "cancellation": {
                       "anyOf": [
                         {
@@ -1329,7 +1343,7 @@
                     },
                     "agenticWarmup": {
                       "default": false,
-                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                       "title": "Agenticwarmup",
                       "type": "boolean"
                     },
@@ -1670,6 +1684,20 @@
                       "ge": 0,
                       "title": "Graceperiod"
                     },
+                    "measurementStart": {
+                      "anyOf": [
+                        {
+                          "ge": 0,
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                      "title": "Measurementstart"
+                    },
                     "cancellation": {
                       "anyOf": [
                         {
@@ -1783,7 +1811,7 @@
                     },
                     "agenticWarmup": {
                       "default": false,
-                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                       "title": "Agenticwarmup",
                       "type": "boolean"
                     },
@@ -2192,6 +2220,20 @@
                       "ge": 0,
                       "title": "Graceperiod"
                     },
+                    "measurementStart": {
+                      "anyOf": [
+                        {
+                          "ge": 0,
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                      "title": "Measurementstart"
+                    },
                     "cancellation": {
                       "anyOf": [
                         {
@@ -2305,7 +2347,7 @@
                     },
                     "agenticWarmup": {
                       "default": false,
-                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                       "title": "Agenticwarmup",
                       "type": "boolean"
                     },
@@ -2728,6 +2770,20 @@
                       "ge": 0,
                       "title": "Graceperiod"
                     },
+                    "measurementStart": {
+                      "anyOf": [
+                        {
+                          "ge": 0,
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                      "title": "Measurementstart"
+                    },
                     "cancellation": {
                       "anyOf": [
                         {
@@ -2841,7 +2897,7 @@
                     },
                     "agenticWarmup": {
                       "default": false,
-                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                       "title": "Agenticwarmup",
                       "type": "boolean"
                     },
@@ -3250,6 +3306,20 @@
                       "ge": 0,
                       "title": "Graceperiod"
                     },
+                    "measurementStart": {
+                      "anyOf": [
+                        {
+                          "ge": 0,
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                      "title": "Measurementstart"
+                    },
                     "cancellation": {
                       "anyOf": [
                         {
@@ -3363,7 +3433,7 @@
                     },
                     "agenticWarmup": {
                       "default": false,
-                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                       "title": "Agenticwarmup",
                       "type": "boolean"
                     },
@@ -3749,6 +3819,20 @@
                       "ge": 0,
                       "title": "Graceperiod"
                     },
+                    "measurementStart": {
+                      "anyOf": [
+                        {
+                          "ge": 0,
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                      "title": "Measurementstart"
+                    },
                     "cancellation": {
                       "anyOf": [
                         {
@@ -3862,7 +3946,7 @@
                     },
                     "agenticWarmup": {
                       "default": false,
-                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                      "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                       "title": "Agenticwarmup",
                       "type": "boolean"
                     },
@@ -5122,6 +5206,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -5235,7 +5333,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -5576,6 +5674,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -5689,7 +5801,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -6098,6 +6210,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -6211,7 +6337,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -6634,6 +6760,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -6747,7 +6887,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -7156,6 +7296,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -7269,7 +7423,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -7655,6 +7809,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -7768,7 +7936,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -8149,6 +8317,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -8262,7 +8444,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -8603,6 +8785,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -8716,7 +8912,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -9125,6 +9321,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -9238,7 +9448,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -9661,6 +9871,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -9774,7 +9998,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -10183,6 +10407,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -10296,7 +10534,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -10682,6 +10920,20 @@
                   "ge": 0,
                   "title": "Graceperiod"
                 },
+                "measurementStart": {
+                  "anyOf": [
+                    {
+                      "ge": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+                  "title": "Measurementstart"
+                },
                 "cancellation": {
                   "anyOf": [
                     {
@@ -10795,7 +11047,7 @@
                 },
                 "agenticWarmup": {
                   "default": false,
-                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+                  "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
                   "title": "Agenticwarmup",
                   "type": "boolean"
                 },
@@ -11528,6 +11780,31 @@
           "title": "Graceperiod",
           "x-jinja2-supported": true
         },
+        "measurementStart": {
+          "anyOf": [
+            {
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+          "title": "Measurementstart",
+          "x-jinja2-supported": true
+        },
         "cancellation": {
           "anyOf": [
             {
@@ -11699,7 +11976,7 @@
         },
         "agenticWarmup": {
           "default": false,
-          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
           "title": "Agenticwarmup",
           "type": "boolean"
         },
@@ -12295,6 +12572,31 @@
           "title": "Graceperiod",
           "x-jinja2-supported": true
         },
+        "measurementStart": {
+          "anyOf": [
+            {
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+          "title": "Measurementstart",
+          "x-jinja2-supported": true
+        },
         "cancellation": {
           "anyOf": [
             {
@@ -12466,7 +12768,7 @@
         },
         "agenticWarmup": {
           "default": false,
-          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
           "title": "Agenticwarmup",
           "type": "boolean"
         },
@@ -14317,6 +14619,31 @@
           "title": "Graceperiod",
           "x-jinja2-supported": true
         },
+        "measurementStart": {
+          "anyOf": [
+            {
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+          "title": "Measurementstart",
+          "x-jinja2-supported": true
+        },
         "cancellation": {
           "anyOf": [
             {
@@ -14488,7 +14815,7 @@
         },
         "agenticWarmup": {
           "default": false,
-          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
           "title": "Agenticwarmup",
           "type": "boolean"
         },
@@ -15145,6 +15472,31 @@
           "title": "Graceperiod",
           "x-jinja2-supported": true
         },
+        "measurementStart": {
+          "anyOf": [
+            {
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+          "title": "Measurementstart",
+          "x-jinja2-supported": true
+        },
         "cancellation": {
           "anyOf": [
             {
@@ -15316,7 +15668,7 @@
         },
         "agenticWarmup": {
           "default": false,
-          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
           "title": "Agenticwarmup",
           "type": "boolean"
         },
@@ -17770,6 +18122,31 @@
           "title": "Graceperiod",
           "x-jinja2-supported": true
         },
+        "measurementStart": {
+          "anyOf": [
+            {
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+          "title": "Measurementstart",
+          "x-jinja2-supported": true
+        },
         "cancellation": {
           "anyOf": [
             {
@@ -17941,7 +18318,7 @@
         },
         "agenticWarmup": {
           "default": false,
-          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
           "title": "Agenticwarmup",
           "type": "boolean"
         },
@@ -21405,6 +21782,31 @@
           "title": "Graceperiod",
           "x-jinja2-supported": true
         },
+        "measurementStart": {
+          "anyOf": [
+            {
+              "ge": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\{\\{.*\\}\\}.*",
+              "description": "Jinja2 template (e.g., '{{ variable }}')."
+            },
+            {
+              "type": "string",
+              "pattern": ".*\\$\\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\\}.*",
+              "description": "Environment variable (e.g., '${VAR}' or '${VAR:default}')."
+            }
+          ],
+          "default": null,
+          "description": "Profiling only: seconds after the profiling start at which the reported summary metrics begin (must be >= 0). The phase runs measurement_start + duration seconds, so 'duration' stays the measured length; requests started earlier still reach the server and the per-request records, but not the summaries. Requires 'duration', a profiling phase that is the only phase, and no agentic warmup. Unset means 0 unless a scenario sets a default. Supports: 720, '12m'.",
+          "title": "Measurementstart",
+          "x-jinja2-supported": true
+        },
         "cancellation": {
           "anyOf": [
             {
@@ -21576,7 +21978,7 @@
         },
         "agenticWarmup": {
           "default": false,
-          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
+          "description": "AGENTIC_REPLAY only: run the synthesized warmup phase (t* snapshot primers, plus the optional cache-pressure substage) before profiling. Off by default: profiling replays from t* with no preceding warmup, so the server sees one continuous replay. Cannot be combined with a nonzero measurement_start. Required by agentic_cache_warmup_duration, warmup_requests_per_lane and agentic_warmup_grace_period.",
           "title": "Agenticwarmup",
           "type": "boolean"
         },

@@ -19,7 +19,12 @@ def _fraction(seed: int, trace_id: str, lane: int) -> float | None:
     )
 
 
-def test_initial_idle_budget_fraction_off_by_default(
+def test_stagger_initial_idle_cap_on_by_default() -> None:
+    field = type(Environment.AGENTX).model_fields["STAGGER_INITIAL_IDLE_CAP"]
+    assert field.default is True
+
+
+def test_initial_idle_budget_fraction_none_when_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(Environment.AGENTX, "STAGGER_INITIAL_IDLE_CAP", False)

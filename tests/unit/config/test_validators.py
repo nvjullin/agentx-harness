@@ -383,3 +383,75 @@ def test_window_start_interval_non_positive_or_non_finite_rejected(
 ) -> None:
     with pytest.raises(ValueError):
         _make(artifacts={"window_start_interval": value})
+
+
+def test_window_start_interval_window_count_includes_measurement_start() -> None:
+    with pytest.raises(ValueError, match="more than 256 windows"):
+        _make(
+            phases=[{**_PROFILING, "duration": 250, "measurement_start": 10}],
+            artifacts={"window_start_interval": 1},
+        )
+
+
+# ---------------------------------------------------------------------------
+# validate_measurement_start — the summary cutoff needs the profiling phase to
+# be the only, duration-bounded phase, without the agentic warmup.
+# ---------------------------------------------------------------------------
+
+
+def test_measurement_start_on_sole_profiling_phase_accepted() -> None:
+    cfg = _make(phases=[{**_PROFILING, "duration": 600, "measurement_start": "12m"}])
+    assert cfg.benchmark.phases[0].measurement_start == 720.0
+
+
+@pytest.mark.parametrize(
+    "phases",
+    [
+        param(
+            [_WARMUP, {**_PROFILING, "duration": 600, "measurement_start": 60}],
+            id="warmup-phase-before",
+        ),
+        param(
+            [{**_WARMUP, "measurement_start": 60}, {**_PROFILING, "duration": 600}],
+            id="on-warmup-phase",
+        ),
+    ],
+)  # fmt: skip
+def test_measurement_start_phase_shape_rejected(phases: list[dict]) -> None:
+    with pytest.raises(ValueError, match="profiling phase that is the only phase"):
+        _make(phases=phases)
+
+
+def test_measurement_start_without_duration_rejected() -> None:
+    with pytest.raises(ValueError, match="requires --benchmark-duration"):
+        _make(phases=[{**_PROFILING, "requests": 10, "measurement_start": 60}])
+
+
+def test_measurement_start_without_duration_under_scenario_deferred() -> None:
+    cfg = _make(
+        scenario="inferencex-agentx-mvp",
+        phases=_agentic_phase(measurement_start=60),
+    )
+    assert cfg.benchmark.phases[0].measurement_start == 60.0
+
+
+def test_measurement_start_with_agentic_warmup_rejected() -> None:
+    with pytest.raises(ValueError, match="cannot be combined with --agentic-warmup"):
+        _make(
+            scenario="inferencex-agentx-mvp",
+            phases=_agentic_phase(agentic_warmup=True, measurement_start=60),
+        )
+
+
+@pytest.mark.parametrize("value", [0, None])
+def test_measurement_start_zero_or_unset_skips_checks(value: float | None) -> None:
+    cfg = _make(
+        phases=[_WARMUP, {**_PROFILING, "requests": 10, "measurement_start": value}]
+    )
+    assert not cfg.benchmark.phases[1].measurement_start
+
+
+@pytest.mark.parametrize("value", [-1, float("nan"), float("inf")])
+def test_measurement_start_negative_or_non_finite_rejected(value: float) -> None:
+    with pytest.raises(ValueError):
+        _make(phases=[{**_PROFILING, "duration": 600, "measurement_start": value}])

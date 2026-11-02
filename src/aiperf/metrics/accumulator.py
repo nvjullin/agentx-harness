@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
@@ -749,10 +750,21 @@ class MetricsAccumulator(BaseMetricsProcessor):
                 adjusted_arrays = compute_network_adjusted_arrays(
                     self._column_store, self._network_rtt_ns
                 )
-            if include_timeslices and self._slice_duration_ns is not None:
+            if (
+                include_timeslices
+                and self._slice_duration_ns is not None
+                and (ctx is None or ctx.min_request_start_ns is None)
+            ):
                 timeslices = self._compute_timeslices(
                     sweeps, mask=mask, adjusted_arrays=adjusted_arrays
                 )
+        if (
+            include_timeslices
+            and self._slice_duration_ns is not None
+            and ctx is not None
+            and ctx.min_request_start_ns is not None
+        ):
+            timeslices = self._whole_phase_timeslices(ctx, adjusted_arrays)
 
         overall_results = self._convert_display_units(overall_results)
 
@@ -788,6 +800,26 @@ class MetricsAccumulator(BaseMetricsProcessor):
             pooled_spec_decode_acceptance_histogram=self._pooled_acceptance_histogram(
                 ctx
             ),
+        )
+
+    def _whole_phase_timeslices(
+        self, ctx: ExportContext, adjusted_arrays: dict[str, FloatArray] | None
+    ) -> list[TimesliceResult]:
+        """Timeslices over the whole phase, ignoring the request-start bound.
+
+        The measurement start cuts only the summary: the time series keeps the
+        startup transient visible.
+        """
+        mask = self._mask_for_export_context(replace(ctx, min_request_start_ns=None))
+        if mask is None or not mask.any():
+            return []
+        if adjusted_arrays is None and self._network_rtt_ns:
+            adjusted_arrays = compute_network_adjusted_arrays(
+                self._column_store, self._network_rtt_ns
+            )
+        sweeps = compute_sweep_curves(self._column_store, mask=mask)
+        return self._compute_timeslices(
+            sweeps, mask=mask, adjusted_arrays=adjusted_arrays
         )
 
     async def export_results(self, ctx: ExportContext) -> AccumulatorMetricsSummary:

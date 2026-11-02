@@ -1949,6 +1949,26 @@ class CLIConfig(BaseConfig):
         ),
     ] = 30.0
 
+    measurement_start: Annotated[
+        Annotated[FiniteFloat, Field(ge=0)] | None,
+        Field(
+            description="Seconds after the profiling start at which the reported summary "
+            "metrics begin (console table, `profile_export_aiperf.json`/`.csv`, server "
+            "metrics and GPU telemetry summaries). The profiling phase runs "
+            "`--measurement-start` + `--benchmark-duration` seconds, so "
+            "`--benchmark-duration` stays the measured length. Requests started earlier "
+            "still load the server and appear in the per-request records, timeslices "
+            "and suffix windows. Requires `--benchmark-duration` (or a scenario "
+            "default) and a profiling phase that is the only phase; cannot be combined "
+            "with `--agentic-warmup`. The `agentx` and `inferencex-agentx-mvp` "
+            "scenarios default to 720; 0 turns it off.",
+        ),
+        CLIParameter(
+            name=("--measurement-start",),
+            group=Groups.LOAD_GENERATOR,
+        ),
+    ] = None
+
     concurrency: Annotated[
         Any,
         Field(
@@ -2276,9 +2296,11 @@ class CLIConfig(BaseConfig):
             description="AGENTIC_REPLAY only: run the synthesized warmup phase "
             "(t* snapshot primers, plus the optional cache-pressure substage) "
             "before profiling. Off by default: profiling replays from t* with no "
-            "preceding warmup, so the server sees one continuous replay; use "
-            "`--window-start-interval` to choose the measured window after the "
-            "run. Required by `--agentic-cache-warmup-duration`, "
+            "preceding warmup, so the server sees one continuous replay, and "
+            "`--measurement-start` excludes the startup transient from the "
+            "reported metrics instead. Cannot be combined with a nonzero "
+            "`--measurement-start` (the AgentX scenarios default it to 720; pass "
+            "`--measurement-start 0`). Required by `--agentic-cache-warmup-duration`, "
             "`--warmup-requests-per-lane` and `--agentic-warmup-grace-period`.",
         ),
         CLIParameter(

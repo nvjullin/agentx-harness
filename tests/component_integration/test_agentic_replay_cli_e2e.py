@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -65,7 +66,13 @@ def weka_small_dir(tmp_path: Path) -> Path:
     return _write_weka_fixture(tmp_path / "weka_small", num_traces=6)
 
 
-def _build_command(weka_dir: Path, *, scenario: bool, unsafe_override: bool) -> str:
+def _build_command(
+    weka_dir: Path,
+    *,
+    scenario: bool,
+    unsafe_override: bool,
+    measurement_start: float = 0,
+) -> str:
     """Build the full ``aiperf profile`` command line for the agentic_replay run (duration below the 900s floor so it completes inside the test timeout)."""
     cmd = f"""
         aiperf profile
@@ -85,7 +92,11 @@ def _build_command(weka_dir: Path, *, scenario: bool, unsafe_override: bool) -> 
             --ui {defaults.ui}
     """
     if scenario:
-        cmd += " --scenario inferencex-agentx-mvp"
+        # The scenario's 720 s default measurement start would outlast the test.
+        cmd += (
+            " --scenario inferencex-agentx-mvp"
+            f" --measurement-start {measurement_start:g}"
+        )
     if unsafe_override:
         cmd += " --unsafe-override"
     return cmd
@@ -271,3 +282,44 @@ def test_agentic_replay_cli_window_start_interval_writes_suffix_windows(
     counts = [entry["successful_request_count"] for entry in entries]
     assert counts == sorted(counts, reverse=True)
     assert counts[-1] > 0
+
+
+@pytest.mark.component_integration
+def test_agentic_replay_cli_measurement_start_cuts_summary(
+    cli: AIPerfCLI, weka_small_dir: Path
+) -> None:
+    """The summaries start at the measurement start and equal the suffix window
+    starting there, the run is extended by the offset, and the per-request
+    records keep the whole run."""
+    cmd = _build_command(
+        weka_small_dir, scenario=True, unsafe_override=True, measurement_start=10
+    )
+    cmd += " --window-start-interval 5"
+    result = cli.run_sync(cmd, timeout=defaults.timeout)
+
+    assert result.exit_code == 0, f"stderr=\n{result.stderr}\n\nlog=\n{result.log}"
+    root = json.loads((result.artifacts_dir / "profile_export_aiperf.json").read_text())
+    windows_dir = result.artifacts_dir / "windows"
+    whole = json.loads(
+        (windows_dir / "start_0s" / "profile_export_aiperf.json").read_text()
+    )
+    cut = json.loads(
+        (windows_dir / "start_10s" / "profile_export_aiperf.json").read_text()
+    )
+
+    assert root["metadata"]["measurement_start_seconds"] == 10
+    assert root["request_count"]["avg"] == cut["request_count"]["avg"]
+    assert 0 < root["request_count"]["avg"] < whole["request_count"]["avg"]
+    start, whole_start, end = (
+        datetime.fromisoformat(data[key])
+        for data, key in (
+            (root, "start_time"),
+            (whole, "start_time"),
+            (root, "end_time"),
+        )
+    )
+    assert (start - whole_start).total_seconds() == pytest.approx(10, abs=1e-3)
+    # Profiling ran the 10 s offset plus --benchmark-duration 30.
+    assert (end - whole_start).total_seconds() >= 39
+    records = (result.artifacts_dir / "profile_export.jsonl").read_text().splitlines()
+    assert len(records) >= whole["request_count"]["avg"]

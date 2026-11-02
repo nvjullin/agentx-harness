@@ -3,6 +3,8 @@
 """AGENTIC_REPLAY warmup/profiling CreditPhaseConfig construction."""
 
 import pydantic
+import pytest
+from pytest import param
 
 from aiperf.common.enums import CreditPhase
 from aiperf.config.phases import PhaseConfig
@@ -64,6 +66,35 @@ def test_profiling_config_propagates_cap() -> None:
     )
     assert profiling.timing_mode == TimingMode.AGENTIC_REPLAY
     assert profiling.phase == CreditPhase.PROFILING
+
+
+@pytest.mark.parametrize(
+    ("measurement_start", "expected"),
+    [
+        param(None, 900.0, id="unset"),
+        param(0, 900.0, id="zero"),
+        param(720, 1620.0, id="offset-added"),
+    ],
+)  # fmt: skip
+def test_profiling_config_runs_measurement_start_plus_duration(
+    measurement_start: float | None, expected: float
+) -> None:
+    phase = _PHASE_ADAPTER.validate_python(
+        {
+            "name": "profiling",
+            "type": "concurrency",
+            "concurrency": 10,
+            "duration": 900,
+            "measurement_start": measurement_start,
+        }
+    )
+    profiling = _build_profiling_config(
+        phase,
+        default_cancellation=RequestCancellationConfig(),
+        phase_index=0,
+        profiling_index=0,
+    )
+    assert profiling.expected_duration_sec == expected
 
 
 def test_warmup_config_total_expected_requests_set() -> None:

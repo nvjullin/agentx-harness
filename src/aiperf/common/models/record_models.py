@@ -491,6 +491,13 @@ class ProfileResults(AIPerfBaseModel):
         default=False,
         description="Whether the profile run was cancelled early",
     )
+    measurement_start_sec: float | None = Field(
+        default=None,
+        ge=0,
+        description="Seconds after the profiling start at which the summary metrics "
+        "begin; ``start_ns`` is that instant. None when the summaries cover the "
+        "whole profiling phase.",
+    )
     successful_request_count: int = Field(
         default=0,
         ge=0,

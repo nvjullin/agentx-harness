@@ -60,7 +60,8 @@ transparency.
   `--streaming` auto-enables if you omit it.
 - **Always on, no flag:** replay delays are always end-to-start (see below); there is no toggle.
 - **Scenario defaults** (auto-filled if omitted; you may override): `--benchmark-duration 1800` (floor
-  900s), `--trajectory-start-min-ratio 0.0` / `--trajectory-start-max-ratio 1.0` (sample t\* across the
+  900s), `--measurement-start 720` (the reported metrics start 720s into profiling, which runs that much
+  longer), `--trajectory-start-min-ratio 0.0` / `--trajectory-start-max-ratio 1.0` (sample t\* across the
   full run).
 - **Auto-injected, no flag:** `ignore_eos=true` is added to `--extra-inputs` (passing `ignore_eos=false`
   is rejected), and a fresh `--random-seed` is filled in — pin one yourself for reproducible run-to-run
@@ -91,7 +92,7 @@ pinned `--random-seed`, and `--ui simple`.
 What to expect:
 
 - **What this does to your server:** holds 256 concurrent agent sessions (trajectory trees) for the
-  benchmark duration (1800s here), replaying the real *shape* of coding-agent traffic — large reused
+  measurement start plus the benchmark duration (720 + 1800s here), replaying the real *shape* of coding-agent traffic — large reused
   prefixes, varied decode lengths, and subagent fan-out (with synthetic filler content) — rather than
   synthetic uniform load.
 - **The first run is slow on purpose:** before any traffic, AIPerf reconstructs the corpus into a
@@ -697,8 +698,8 @@ independent t\*, so concurrent copies of the same trace don't move in lockstep; 
 trace is sent during profiling.
 
 ### Q: Does the run length depend on the dataset size?
-The run is bounded by `--benchmark-duration` (the scenario requires at least 900 seconds and defaults
-to 1800). Lanes recycle continuously, so a small dataset is simply replayed more times; the duration,
+The run is bounded by `--measurement-start` + `--benchmark-duration` (the scenario defaults to
+720 + 1800 seconds and requires a duration of at least 900). Lanes recycle continuously, so a small dataset is simply replayed more times; the duration,
 not the dataset size, determines how long load is applied.
 
 ### Q: How do I scale the offered load up or down?
@@ -727,17 +728,23 @@ allowed under the scenario.
 ## 7. Reading the results: metrics, validity, and submission requirements
 
 ### Q: How do I exclude the startup transient?
-Choose the measured window after the run. Every replay starts with lanes idle at their sampled t\*,
-and the per-trace idle cap releases the lanes that sit in long recorded gaps together, so the first
-several minutes are not steady state. `--window-start-interval SECONDS` (60 under the `agentx` preset)
-writes the profiling summary for each window that starts `k × SECONDS` into profiling and ends at its
+The scenarios do it by default. Every replay starts with lanes idle at their sampled t\* and cold
+caches, and the per-trace idle cap releases the lanes that sit in long recorded gaps within its first
+interval (each tree's first release is staggered to a seeded random share of the cap, so they do not
+all return at once), so the first several minutes are not steady state. `--measurement-start 720` (the scenario default) starts
+every reported metric 720 seconds into profiling and runs profiling that much longer, so
+`--benchmark-duration` stays the measured length; the earlier requests still load the server.
+
+To choose a different start after the run, `--window-start-interval SECONDS` (60 under the `agentx`
+preset) writes the profiling summary for each window that starts `k × SECONDS` into profiling and ends at its
 end, under `windows/start_<offset>s/`, indexed by `windows/manifest.json`. Request metrics there cover
 requests that started in the window; server metrics deltas start from the last scrape before it. See
 [Choosing the measured window](../tutorials/agentx-mvp.md#choosing-the-measured-window).
 
 ### Q: What performance numbers does the benchmark report?
-The standard AIPerf metric set, computed over the **profiling phase only** (warmup traffic is excluded
-from every reported number; per-window summaries are described above). Full definitions live in
+The standard AIPerf metric set, computed over profiling requests that start after
+`--measurement-start` (warmup traffic and the startup transient are excluded from every reported
+number; per-window summaries are described above). Full definitions live in
 [the metrics reference](../metrics-reference.md); the ones a serving engineer watches here are:
 
 - **Time to First Token (TTFT)** and **Inter Token Latency (ITL)** — the streaming latency KPIs. These
@@ -1043,7 +1050,7 @@ Not as a *valid* run: any `--benchmark-duration` below 900s refuses to start (th
 - **Lowering `--concurrency`** lightens the load but shortens nothing — the 900s floor is
   wall-clock. A small concurrency at 900s is the cheapest *valid* run.
 - **A true minutes-long shakeout** (connectivity, endpoint, artifacts) is `--unsafe-override` plus a
-  short duration: it exercises the full pipeline and is marked invalid, which is fine for plumbing
+  short duration and `--measurement-start 0`: it exercises the full pipeline and is marked invalid, which is fine for plumbing
   verification.
 
 The useful trick: reconstruction cost depends on corpus size, not duration or concurrency — so run
@@ -1168,7 +1175,8 @@ The ones a serving engineer is most likely to use:
 | Setting | What it does |
 |---|---|
 | `--concurrency N` | Number of concurrent agent sessions (trees). Your main load dial. |
-| `--benchmark-duration S` | How long profiling runs (scenario minimum 900s, default 1800s). |
+| `--benchmark-duration S` | How long profiling is measured (scenario minimum 900s, default 1800s). |
+| `--measurement-start S` | Seconds into profiling at which the reported metrics start; profiling runs `S` longer (scenario default 720s, `0` reports the whole phase). |
 | `--random-seed` | Makes t\* sampling and lane selection reproducible across runs. Also required for dataset-cache reuse — the cache key includes the seed (see §8). |
 
 ### Fidelity / shape

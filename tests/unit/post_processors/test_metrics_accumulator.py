@@ -893,6 +893,56 @@ class TestTimesliceExport:
         assert len(summary.timeslices[1].metric_results) > 0
 
     @pytest.mark.asyncio
+    async def test_export_with_request_start_bound_keeps_whole_phase_timeslices(
+        self, mock_metric_registry: Mock, mock_run
+    ) -> None:
+        """A measurement start cuts the summary, not the time series."""
+        mock_run.cfg.artifacts.slice_duration = 1.0
+        processor = MetricsAccumulator(mock_run)
+        processor._tags_to_types = {
+            RequestLatencyMetric.tag: MetricType.RECORD,
+            RequestCountMetric.tag: MetricType.AGGREGATE,
+        }
+        processor._metric_classes = {
+            RequestLatencyMetric.tag: RequestLatencyMetric,
+            RequestCountMetric.tag: RequestCountMetric,
+        }
+        processor._aggregation_kinds = {RequestCountMetric.tag: AggregationKind.SUM}
+        for session_num, start_s, latency_ns in (
+            (0, 0.5, 100_000_000.0),
+            (1, 1.5, 300_000_000.0),
+        ):
+            await processor.process_record(
+                create_metric_records_data(
+                    session_num=session_num,
+                    benchmark_phase=CreditPhase.PROFILING,
+                    request_start_ns=int(start_s * NANOS_PER_SECOND),
+                    request_end_ns=int(start_s * NANOS_PER_SECOND + latency_ns),
+                    results=[
+                        {
+                            RequestLatencyMetric.tag: latency_ns,
+                            RequestCountMetric.tag: 1,
+                        }
+                    ],
+                )
+            )
+        cut_ns = NANOS_PER_SECOND
+
+        summary = await processor.export_results(
+            ExportContext(
+                start_ns=cut_ns,
+                phase=CreditPhase.PROFILING,
+                min_request_start_ns=cut_ns,
+            )
+        )
+
+        assert summary.results[RequestCountMetric.tag].avg == pytest.approx(1.0)
+        assert summary.results[RequestLatencyMetric.tag].avg == pytest.approx(300.0)
+        assert summary.timeslices is not None
+        assert len(summary.timeslices) == 2
+        assert summary.timeslices[0].start_ns < cut_ns
+
+    @pytest.mark.asyncio
     async def test_export_no_timeslices_without_config(
         self, mock_metric_registry: Mock, mock_run
     ) -> None:

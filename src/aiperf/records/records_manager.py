@@ -1486,9 +1486,13 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         error_results: list[ErrorDetails] = []
 
         phase_stats = RecordsManager._create_result_stats_for_phase(self, phase)
+        measurement_start_ns = RecordsManager._measurement_start_ns(
+            self, phase, phase_stats
+        )
+        summary_start_ns = measurement_start_ns or phase_stats.start_ns
         summary_ctx = SummaryContext(
             accumulators=dict(self._accumulators),
-            start_ns=phase_stats.start_ns or 0,
+            start_ns=summary_start_ns or 0,
             end_ns=phase_stats.requests_end_ns or 0,
             phase=phase,
             cancelled=cancelled,
@@ -1504,9 +1508,10 @@ class RecordsManager(PullClientMixin, BaseComponentService):
             return records_results, timeslices, error_results, summary_ctx
 
         ctx = ExportContext(
-            start_ns=phase_stats.start_ns,
+            start_ns=summary_start_ns,
             end_ns=phase_stats.requests_end_ns,
             phase=phase,
+            min_request_start_ns=measurement_start_ns,
             error_summary=self._error_tracker.get_error_summary_for_phase(phase),
             cancelled=cancelled,
         )
@@ -1525,6 +1530,16 @@ class RecordsManager(PullClientMixin, BaseComponentService):
             )
             if ts:
                 timeslices = ts
+        if measurement_start_ns is not None and not any(
+            result.tag in ("request_count", "error_request_count") and result.avg
+            for result in records_results
+        ):
+            self.warning(
+                "No request started after the measurement start "
+                f"({RecordsManager._measurement_start_sec(self):g}s into profiling), "
+                "so the summary metrics are empty; the per-request records and "
+                "timeslices still cover the whole run."
+            )
         self._adjust_multi_phase_aggregate_rates(phase, records_results)
         return records_results, timeslices, error_results, summary_ctx
 
@@ -1595,6 +1610,33 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         result = by_tag.get(tag)
         if result is not None:
             result.avg = value
+
+    def _measurement_start_ns(
+        self, phase: CreditPhase, stats: PhaseRecordsStats
+    ) -> int | None:
+        """Instant the profiling summaries start, when a measurement start is set.
+
+        Config validation allows a nonzero measurement start only on a profiling
+        phase that is the only phase, so the aggregate phase start anchors it.
+        """
+        if phase != CreditPhase.PROFILING or stats.start_ns is None:
+            return None
+        offset_sec = RecordsManager._measurement_start_sec(self)
+        if offset_sec is None:
+            return None
+        return stats.start_ns + round(offset_sec * NANOS_PER_SECOND)
+
+    def _measurement_start_sec(self) -> float | None:
+        cfg = getattr(getattr(self, "run", None), "cfg", None)
+        if cfg is None:
+            return None
+        offsets = [
+            float(phase.measurement_start)
+            for phase in cfg.get_profiling_phases()
+            if isinstance(phase.measurement_start, int | float)
+            and phase.measurement_start > 0
+        ]
+        return offsets[0] if offsets else None
 
     def _create_result_stats_for_phase(self, phase: CreditPhase) -> PhaseRecordsStats:
         if self._has_multiple_phase_instances(phase):
@@ -1867,14 +1909,20 @@ class RecordsManager(PullClientMixin, BaseComponentService):
                 )
                 continue
 
+            # Coverage is judged over the measured span: duration seconds that
+            # start at the measurement start.
+            measurement_start_ns = RecordsManager._measurement_start_ns(
+                self, CreditPhase.PROFILING, stats
+            )
             ctx = ExportContext(
-                start_ns=stats.start_ns,
+                start_ns=measurement_start_ns or stats.start_ns,
                 end_ns=stats.requests_end_ns,
                 phase=CreditPhase.PROFILING,
                 phase_index=stats.phase_index,
                 phase_name=phase_config.name,
                 phase_kind="profiling",
                 is_phase_scoped=True,
+                min_request_start_ns=measurement_start_ns,
                 cancelled=False,
             )
             coverage = calculate(
@@ -2172,6 +2220,9 @@ class RecordsManager(PullClientMixin, BaseComponentService):
         await self._finalize_stream_exporters()
 
         phase_stats = RecordsManager._create_result_stats_for_phase(self, phase)
+        measurement_start_ns = RecordsManager._measurement_start_ns(
+            self, phase, phase_stats
+        )
         phase_records = await RecordsManager._build_phase_profile_results(
             self, phase, cancelled
         )
@@ -2192,10 +2243,13 @@ class RecordsManager(PullClientMixin, BaseComponentService):
                 warmup_records=warmup_records_results,
                 timeslices=timeslices or None,
                 completed=records_completed,
-                start_ns=phase_stats.start_ns or time.time_ns(),
+                start_ns=measurement_start_ns or phase_stats.start_ns or time.time_ns(),
                 end_ns=phase_stats.requests_end_ns or time.time_ns(),
                 error_summary=self._error_tracker.get_error_summary_for_phase(phase),
                 was_cancelled=cancelled,
+                measurement_start_sec=RecordsManager._measurement_start_sec(self)
+                if measurement_start_ns is not None
+                else None,
                 successful_request_count=phase_stats.success_records,
                 error_request_count=phase_stats.error_records,
                 branch_stats=self._latest_branch_stats
@@ -2303,9 +2357,12 @@ class RecordsManager(PullClientMixin, BaseComponentService):
             if phase_stats.requests_end_ns is not None
             else None
         )
+        measurement_start_ns = RecordsManager._measurement_start_ns(
+            self, CreditPhase.PROFILING, phase_stats
+        )
         telemetry_export_data = await self._gpu_telemetry_accumulator.export_results(
             ExportContext(
-                start_ns=phase_stats.start_ns,
+                start_ns=measurement_start_ns or phase_stats.start_ns,
                 end_ns=profiling_end_ns,
                 phase=CreditPhase.PROFILING,
                 error_summary=error_summary,
@@ -2408,6 +2465,9 @@ class RecordsManager(PullClientMixin, BaseComponentService):
                 ExportContext(
                     start_ns=profiling_start_ns,
                     end_ns=profiling_end_ns,
+                    min_request_start_ns=RecordsManager._measurement_start_ns(
+                        self, CreditPhase.PROFILING, phase_stats
+                    ),
                     error_summary=error_summary,
                     warmup_start_ns=warmup_phase_stats.start_ns,
                     warmup_end_ns=warmup_phase_stats.requests_end_ns,

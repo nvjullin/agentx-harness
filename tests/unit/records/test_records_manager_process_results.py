@@ -456,6 +456,118 @@ class TestProcessResultsCancelled:
         assert result.results.was_cancelled is False
 
 
+class TestProcessResultsMeasurementStart:
+    """A measurement start moves the root summary, its start time and the
+    coverage check to the measured span."""
+
+    _START_NS = 1_000_000_000
+    _CUT_NS = 721_000_000_000
+
+    @staticmethod
+    def _phase_scoped_accumulator(request_count: float) -> MagicMock:
+        acc = MagicMock()
+        acc.__class__.__name__ = "StubMetricsAccumulator"
+        acc.supports_phase_scoped_export = True
+        acc.export_results = AsyncMock(
+            return_value=AccumulatorMetricsSummary(
+                results={
+                    "request_count": MetricResult(
+                        tag="request_count",
+                        header="Request Count",
+                        unit="requests",
+                        avg=request_count,
+                    )
+                },
+                timeslices=None,
+            )
+        )
+        return acc
+
+    def _manager(self, acc: MagicMock, *, measurement_start: object) -> MagicMock:
+        mgr = _make_manager_mock(
+            accumulators={AccumulatorType.METRIC_RESULTS: acc},
+            start_ns=self._START_NS,
+            end_ns=4_000_000_000_000,
+        )
+        mgr._has_multiple_phase_instances.return_value = False
+        phase_config = MagicMock()
+        phase_config.name = "profiling"
+        phase_config.duration = 3600.0
+        phase_config.measurement_start = measurement_start
+        mgr.run.cfg.get_profiling_phases.return_value = [phase_config]
+        return mgr
+
+    @pytest.mark.asyncio
+    async def test_root_summary_starts_at_measurement_start(self) -> None:
+        acc = self._phase_scoped_accumulator(3.0)
+        mgr = self._manager(acc, measurement_start=720.0)
+
+        result = await mgr._process_results(
+            phase=CreditPhase.PROFILING, cancelled=False
+        )
+
+        ctx = acc.export_results.await_args.args[0]
+        assert ctx.start_ns == self._CUT_NS
+        assert ctx.min_request_start_ns == self._CUT_NS
+        assert result.results.start_ns == self._CUT_NS
+        assert result.results.measurement_start_sec == 720.0
+        mgr.warning.assert_not_called()
+
+    @pytest.mark.parametrize("measurement_start", [None, 0.0])
+    @pytest.mark.asyncio
+    async def test_no_measurement_start_keeps_phase_start(
+        self, measurement_start: float | None
+    ) -> None:
+        acc = self._phase_scoped_accumulator(3.0)
+        mgr = self._manager(acc, measurement_start=measurement_start)
+
+        result = await mgr._process_results(
+            phase=CreditPhase.PROFILING, cancelled=False
+        )
+
+        ctx = acc.export_results.await_args.args[0]
+        assert ctx.start_ns == self._START_NS
+        assert ctx.min_request_start_ns is None
+        assert result.results.start_ns == self._START_NS
+        assert result.results.measurement_start_sec is None
+
+    @pytest.mark.asyncio
+    async def test_empty_measured_span_warns(self) -> None:
+        acc = self._phase_scoped_accumulator(0.0)
+        mgr = self._manager(acc, measurement_start=720.0)
+
+        await mgr._process_results(phase=CreditPhase.PROFILING, cancelled=True)
+
+        assert "No request started after the measurement start" in str(
+            mgr.warning.call_args
+        )
+
+    @pytest.mark.asyncio
+    async def test_coverage_measured_from_measurement_start(self) -> None:
+        acc = self._phase_scoped_accumulator(3.0)
+        acc.profile_metric_duration_coverage.return_value = (
+            ProfileMetricDurationCoverage(
+                phase_name="profiling",
+                expected_duration_seconds=3600.0,
+                required_ratio=0.95,
+                ttft_ratio=1.0,
+                inter_token_latency_ratio=1.0,
+            )
+        )
+        mgr = self._manager(acc, measurement_start=720.0)
+        mgr.run.cfg.scenario = "inferencex-agentx-mvp"
+
+        result = await mgr._process_results(
+            phase=CreditPhase.PROFILING, cancelled=False
+        )
+
+        assert result.fatal_errors == []
+        call = acc.profile_metric_duration_coverage.call_args
+        assert call.args[0].start_ns == self._CUT_NS
+        assert call.args[0].min_request_start_ns == self._CUT_NS
+        assert call.kwargs["expected_duration_seconds"] == 3600.0
+
+
 # ---------------------------------------------------------------------------
 # Tests: _finalize_stream_exporters integration
 # ---------------------------------------------------------------------------

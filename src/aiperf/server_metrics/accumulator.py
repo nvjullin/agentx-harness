@@ -166,7 +166,9 @@ class ServerMetricsAccumulator(BaseMetricsProcessor):
         Exported ``warmup_end_ns`` is the aggregation window end (may extend
         past the credit-phase complete timestamp to include the end-of-warmup
         scrape) so ``phase_time_ranges["warmup"]`` matches
-        ``warmup_endpoint_summaries``.
+        ``warmup_endpoint_summaries``. A ``ctx.min_request_start_ns`` (the
+        profiling measurement start) moves the summary start there, timeslices
+        included; the Parquet artifact still spans the whole phase.
 
         Returns:
             ServerMetricsResults containing endpoint summaries with computed statistics,
@@ -187,14 +189,27 @@ class ServerMetricsAccumulator(BaseMetricsProcessor):
         if not self._server_metrics_hierarchy.endpoints:
             return None
 
-        endpoint_summaries = self._compute_phase_endpoint_summaries(
-            CreditPhase.PROFILING,
-            self._slice_duration,
-            include_final_collection=not ctx.is_phase_scoped,
-        )
+        summary_start_ns = start_ns
+        if ctx.min_request_start_ns is not None:
+            # A measurement start cuts the summary by time, like a suffix window;
+            # phase-tagged series would keep every sample since the phase began.
+            summary_start_ns = ctx.min_request_start_ns
+            endpoint_summaries = self._compute_endpoint_summaries(
+                summary_start_ns,
+                end_ns,
+                self._slice_duration,
+                include_final_collection=True,
+                window_scoped_info=True,
+            )
+        else:
+            endpoint_summaries = self._compute_phase_endpoint_summaries(
+                CreditPhase.PROFILING,
+                self._slice_duration,
+                include_final_collection=not ctx.is_phase_scoped,
+            )
         if not endpoint_summaries:
             endpoint_summaries = self._compute_endpoint_summaries(
-                start_ns,
+                summary_start_ns,
                 end_ns,
                 self._slice_duration,
                 include_final_collection=not ctx.is_phase_scoped,
@@ -233,7 +248,7 @@ class ServerMetricsAccumulator(BaseMetricsProcessor):
             benchmark_id=self.run.benchmark_id,
             endpoint_summaries=endpoint_summaries,
             warmup_endpoint_summaries=warmup_endpoint_summaries or None,
-            start_ns=start_ns,
+            start_ns=summary_start_ns,
             end_ns=end_ns,
             endpoints_configured=endpoint_list,
             endpoints_successful=endpoint_list,

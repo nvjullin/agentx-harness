@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 from aiperf.common.accumulator_protocols import ExportContext
@@ -433,6 +435,53 @@ class TestServerMetricsAccumulator:
         assert info.total_fetches == 2
         assert info.first_fetch_ns == 3_000_000_000
         assert whole.endpoint_summaries[endpoint_key].info.total_fetches == 4
+
+    async def test_export_results_measurement_start_cuts_summary_not_parquet(
+        self,
+        mock_cfg: BenchmarkRun,
+    ) -> None:
+        """A measurement start (``min_request_start_ns``) cuts the root summary by
+        time; the Parquet artifact keeps the whole phase."""
+        processor = ServerMetricsAccumulator(mock_cfg)
+        for timestamp_ns, value in (
+            (1_000_000_000, 0.0),
+            (2_000_000_000, 1000.0),
+            (3_000_000_000, 1010.0),
+            (4_000_000_000, 1030.0),
+        ):
+            await processor.process_server_metrics_record(
+                ServerMetricsRecord(
+                    endpoint_url="http://node1:8081/metrics",
+                    timestamp_ns=timestamp_ns,
+                    endpoint_latency_ns=5_000_000,
+                    metrics={
+                        "requests": MetricFamily(
+                            type=PrometheusMetricType.COUNTER,
+                            description="Total requests",
+                            samples=[MetricSample(labels=None, value=value)],
+                        )
+                    },
+                    benchmark_phase=CreditPhase.PROFILING,
+                )
+            )
+        processor._export_parquet_widened = AsyncMock()
+
+        result = await processor.export_results(
+            ExportContext(
+                start_ns=1_000_000_000,
+                end_ns=4_000_000_000,
+                min_request_start_ns=2_500_000_000,
+            )
+        )
+
+        assert result is not None
+        endpoint_key = next(iter(result.endpoint_summaries))
+        series = result.endpoint_summaries[endpoint_key].metrics["requests"].series
+        assert series[0].stats.total == pytest.approx(30.0)
+        assert result.start_ns == 2_500_000_000
+        processor._export_parquet_widened.assert_awaited_once_with(
+            1_000_000_000, 4_000_000_000
+        )
 
     async def test_export_window_results_without_endpoints_returns_none(
         self, mock_cfg: BenchmarkRun
